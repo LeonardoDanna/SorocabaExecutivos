@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import Logo from "./Logo";
 import { Menu, X, UserCircle, LogOut, ChevronDown, User, LayoutDashboard, Car } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
@@ -92,6 +93,25 @@ function PerfilDropdown({ perfil }: { perfil: string }) {
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [perfil, setPerfil] = useState<string | null>(null);
+  const pathname = usePathname();
+  const router = useRouter();
+
+  function handleLogoClick(e: React.MouseEvent) {
+    if (pathname === "/") {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }
+
+  function handleAnchorClick(e: React.MouseEvent, id: string) {
+    if (pathname === "/") {
+      e.preventDefault();
+      document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+    } else {
+      e.preventDefault();
+      router.push(`/#${id}`);
+    }
+  }
 
   useEffect(() => {
     const supabase = createClient();
@@ -113,16 +133,16 @@ export default function Navbar() {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-[#1E1E1E]/90 backdrop-blur-sm border-b border-[#444444]">
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-        <Link href="/">
+        <Link href="/" onClick={handleLogoClick}>
           <Logo size="sm" />
         </Link>
 
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-8">
-          <Link href="#sobre" className="text-brand-muted hover:text-brand-text transition-colors text-sm uppercase tracking-wider">Sobre</Link>
-          <Link href="#servicos" className="text-brand-muted hover:text-brand-text transition-colors text-sm uppercase tracking-wider">Serviços</Link>
-          <Link href="#precos" className="text-brand-muted hover:text-brand-text transition-colors text-sm uppercase tracking-wider">Preços</Link>
-          <Link href="#como-funciona" className="text-brand-muted hover:text-brand-text transition-colors text-sm uppercase tracking-wider">Como funciona</Link>
+          <Link href="#sobre" onClick={(e) => handleAnchorClick(e, "sobre")} className="text-brand-muted hover:text-brand-text transition-colors text-sm uppercase tracking-wider">Sobre</Link>
+          <Link href="#servicos" onClick={(e) => handleAnchorClick(e, "servicos")} className="text-brand-muted hover:text-brand-text transition-colors text-sm uppercase tracking-wider">Serviços</Link>
+          <Link href="#precos" onClick={(e) => handleAnchorClick(e, "precos")} className="text-brand-muted hover:text-brand-text transition-colors text-sm uppercase tracking-wider">Preços</Link>
+          <Link href="#como-funciona" onClick={(e) => handleAnchorClick(e, "como-funciona")} className="text-brand-muted hover:text-brand-text transition-colors text-sm uppercase tracking-wider">Como funciona</Link>
         </nav>
 
         <div className="hidden md:flex items-center gap-3">
@@ -152,10 +172,10 @@ export default function Navbar() {
       {/* Mobile menu */}
       {open && (
         <div className="md:hidden bg-[#2B2B2B] border-t border-[#444444] px-6 py-4 flex flex-col gap-4">
-          <Link href="#sobre" onClick={() => setOpen(false)} className="text-brand-muted hover:text-brand-text text-sm uppercase tracking-wider">Sobre</Link>
-          <Link href="#servicos" onClick={() => setOpen(false)} className="text-brand-muted hover:text-brand-text text-sm uppercase tracking-wider">Serviços</Link>
-          <Link href="#precos" onClick={() => setOpen(false)} className="text-brand-muted hover:text-brand-text text-sm uppercase tracking-wider">Preços</Link>
-          <Link href="#como-funciona" onClick={() => setOpen(false)} className="text-brand-muted hover:text-brand-text text-sm uppercase tracking-wider">Como funciona</Link>
+          <Link href="#sobre" onClick={(e) => { setOpen(false); handleAnchorClick(e, "sobre"); }} className="text-brand-muted hover:text-brand-text text-sm uppercase tracking-wider">Sobre</Link>
+          <Link href="#servicos" onClick={(e) => { setOpen(false); handleAnchorClick(e, "servicos"); }} className="text-brand-muted hover:text-brand-text text-sm uppercase tracking-wider">Serviços</Link>
+          <Link href="#precos" onClick={(e) => { setOpen(false); handleAnchorClick(e, "precos"); }} className="text-brand-muted hover:text-brand-text text-sm uppercase tracking-wider">Preços</Link>
+          <Link href="#como-funciona" onClick={(e) => { setOpen(false); handleAnchorClick(e, "como-funciona"); }} className="text-brand-muted hover:text-brand-text text-sm uppercase tracking-wider">Como funciona</Link>
           <div className="flex flex-col gap-2 pt-2 border-t border-[#444444]">
             {perfil !== null ? (
               <>

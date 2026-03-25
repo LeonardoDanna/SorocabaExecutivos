@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Navbar from "./components/Navbar";
+import ScrollButton from "./components/ScrollButton";
 import Footer from "./components/Footer";
 import {
   Car,
@@ -98,8 +99,7 @@ export default function Home() {
               className="text-5xl md:text-7xl font-bold leading-tight mb-6 uppercase text-[#F0F0F0]"
               style={{ fontFamily: "var(--font-oswald)" }}
             >
-              Transporte Executivo em{" "}
-              <span className="text-[#CC0000]">Sorocaba</span> e Região
+              Transporte <span className="text-[#CC0000]">Executivo</span>
             </h1>
             <p className="text-[#A0A0A0] text-xl mb-10 leading-relaxed">
               Segurança, conforto e pontualidade em cada viagem.
@@ -111,12 +111,12 @@ export default function Home() {
               >
                 Solicitar uma corrida
               </Link>
-              <a
-                href="#precos"
+              <ScrollButton
+                targetId="precos"
                 className="border border-[#444444] text-[#F0F0F0] px-8 py-4 rounded text-center font-semibold hover:border-[#CC0000] transition-colors text-lg"
               >
                 Ver tabela de preços
-              </a>
+              </ScrollButton>
             </div>
           </div>
         </div>

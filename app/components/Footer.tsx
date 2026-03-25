@@ -39,6 +39,17 @@ export default function Footer() {
 
       <div className="border-t border-[#333333] px-6 py-4 text-center text-xs text-brand-muted">
         CNPJ 48.409.953/0001-34 · © {new Date().getFullYear()} Sorocaba Executivos. Todos os direitos reservados.
+        <span className="block mt-1 text-[#555555]">
+          Desenvolvido por{" "}
+          <a
+            href="https://www.linkedin.com/in/leonardo-danna/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-brand-muted transition-colors"
+          >
+            Leonardo Danna
+          </a>
+        </span>
       </div>
     </footer>
   );
