@@ -3,8 +3,38 @@
 import Navbar from "../components/Navbar";
 import { MapPin, Navigation, Calendar, Clock, ArrowRight } from "lucide-react";
 import { useState, useTransition, useEffect, Suspense } from "react";
+import { useLang, type Lang } from "../hooks/useLang";
 import { useSearchParams } from "next/navigation";
 import { solicitarCorrida } from "../actions/viagens";
+
+const t = {
+  pt: {
+    tag: "Nova viagem",
+    title: "Solicitar corrida",
+    sub: "Preencha os dados da sua viagem.",
+    origem: "Local de origem",
+    placeholder_origem: "Endereço de partida",
+    destino: "Destino",
+    placeholder_destino: "Endereço de destino",
+    data: "Data",
+    horario: "Horário",
+    enviando: "Enviando...",
+    solicitar: "Solicitar corrida",
+  },
+  en: {
+    tag: "New trip",
+    title: "Request a ride",
+    sub: "Fill in your trip details.",
+    origem: "Pickup location",
+    placeholder_origem: "Departure address",
+    destino: "Destination",
+    placeholder_destino: "Destination address",
+    data: "Date",
+    horario: "Time",
+    enviando: "Sending...",
+    solicitar: "Request ride",
+  },
+};
 
 function defaultHoraMinuto() {
   const now = new Date();
@@ -19,7 +49,8 @@ function defaultHoraMinuto() {
 
 const { h: hDefault, m: mDefault } = defaultHoraMinuto();
 
-function SolicitarForm() {
+function SolicitarForm({ lang }: { lang: Lang }) {
+  const l = t[lang];
   const params = useSearchParams();
   const [origem, setOrigem] = useState(params.get("origem") ?? "");
   const [destino, setDestino] = useState(params.get("destino") ?? "");
@@ -51,15 +82,14 @@ function SolicitarForm() {
   return (
     <div className="bg-[#2B2B2B] border border-[#444444] rounded-xl p-8 shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Origem */}
         <div>
-          <label className="block text-[#A0A0A0] text-sm mb-2">Local de origem</label>
+          <label className="block text-[#A0A0A0] text-sm mb-2">{l.origem}</label>
           <div className="relative">
             <Navigation size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#A0A0A0]" />
             <input
               name="origem"
               type="text"
-              placeholder="Endereço de partida"
+              placeholder={l.placeholder_origem}
               value={origem}
               onChange={(e) => setOrigem(e.target.value)}
               required
@@ -68,15 +98,14 @@ function SolicitarForm() {
           </div>
         </div>
 
-        {/* Destino */}
         <div>
-          <label className="block text-[#A0A0A0] text-sm mb-2">Destino</label>
+          <label className="block text-[#A0A0A0] text-sm mb-2">{l.destino}</label>
           <div className="relative">
             <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#A0A0A0]" />
             <input
               name="destino"
               type="text"
-              placeholder="Endereço de destino"
+              placeholder={l.placeholder_destino}
               value={destino}
               onChange={(e) => setDestino(e.target.value)}
               required
@@ -85,10 +114,9 @@ function SolicitarForm() {
           </div>
         </div>
 
-        {/* Data e Hora */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-[#A0A0A0] text-sm mb-2">Data</label>
+            <label className="block text-[#A0A0A0] text-sm mb-2">{l.data}</label>
             <div className="relative">
               <Calendar size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#A0A0A0]" />
               <input
@@ -102,7 +130,7 @@ function SolicitarForm() {
           </div>
 
           <div>
-            <label className="block text-[#A0A0A0] text-sm mb-2">Horário</label>
+            <label className="block text-[#A0A0A0] text-sm mb-2">{l.horario}</label>
             <input type="hidden" name="hora" value={`${hora}:${minuto}`} />
             <div className="flex items-center gap-2">
               <div className="relative flex-1">
@@ -142,7 +170,7 @@ function SolicitarForm() {
           disabled={isPending}
           className="w-full bg-[#CC0000] text-white py-4 rounded font-semibold hover:bg-[#E50000] transition-colors flex items-center justify-center gap-2 text-lg disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          {isPending ? "Enviando..." : "Solicitar corrida"}
+          {isPending ? l.enviando : l.solicitar}
           {!isPending && <ArrowRight size={20} />}
         </button>
       </form>
@@ -151,34 +179,53 @@ function SolicitarForm() {
 }
 
 export default function SolicitarPage() {
+  const { lang, setLang } = useLang();
+  const l = t[lang];
+
   return (
     <>
-      <Navbar />
+      <Navbar lang={lang} />
       <div className="min-h-screen bg-[#1E1E1E] pt-24 pb-12 px-4">
         <div className="max-w-2xl mx-auto">
+
+          {/* Toggle PT / EN */}
+          <div className="flex justify-end mb-6">
+            <div className="flex items-center gap-1 bg-[#2B2B2B] border border-[#444444] rounded p-1">
+              <button
+                onClick={() => setLang("pt")}
+                className={`px-3 py-1 rounded text-xs font-semibold transition-colors ${
+                  lang === "pt" ? "bg-[#CC0000] text-white" : "text-[#A0A0A0] hover:text-[#F0F0F0]"
+                }`}
+              >
+                PT
+              </button>
+              <button
+                onClick={() => setLang("en")}
+                className={`px-3 py-1 rounded text-xs font-semibold transition-colors ${
+                  lang === "en" ? "bg-[#CC0000] text-white" : "text-[#A0A0A0] hover:text-[#F0F0F0]"
+                }`}
+              >
+                EN
+              </button>
+            </div>
+          </div>
+
           <div className="mb-8">
             <p className="text-[#CC0000] uppercase tracking-[0.3em] text-sm font-semibold mb-2">
-              Nova viagem
+              {l.tag}
             </p>
             <h1
               className="text-4xl font-bold text-[#F0F0F0] uppercase"
               style={{ fontFamily: "var(--font-oswald)" }}
             >
-              Solicitar corrida
+              {l.title}
             </h1>
-            <p className="text-[#A0A0A0] mt-2">Preencha os dados da sua viagem.</p>
+            <p className="text-[#A0A0A0] mt-2">{l.sub}</p>
           </div>
 
           <Suspense fallback={null}>
-            <SolicitarForm />
+            <SolicitarForm lang={lang} />
           </Suspense>
-
-          <p className="text-center text-[#A0A0A0] text-sm mt-6">
-            Dúvidas sobre valores?{" "}
-            <a href="/#precos" className="text-[#CC0000] hover:text-[#E50000]">
-              Consulte nossa tabela de preços
-            </a>
-          </p>
         </div>
       </div>
     </>

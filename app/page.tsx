@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
+import { useLang } from "./hooks/useLang";
 import Navbar from "./components/Navbar";
-import ScrollButton from "./components/ScrollButton";
 import Footer from "./components/Footer";
 import {
   Car,
@@ -28,7 +27,6 @@ const content = {
       highlight: "Executivo",
       sub: "Segurança, conforto e pontualidade em cada viagem.",
       cta: "Solicitar uma corrida",
-      precos: "Ver tabela de preços",
     },
     sobre: {
       tag: "Quem somos",
@@ -78,14 +76,6 @@ const content = {
         "Transfer para todo o Estado de SP",
       ],
     },
-    precos: {
-      tag: "Transparência",
-      title: "Tabela de",
-      highlight: "trajetos",
-      thTrajeto: "Trajeto",
-      thValor: "Valor",
-      nota: "* Em caso de pernoite (Taubaté e São Vicente), será cobrado o valor da estadia com apresentação de comprovante, além do valor do retorno.",
-    },
     como: {
       tag: "Simples e rápido",
       title: "Como",
@@ -122,7 +112,6 @@ const content = {
       highlight: "Transport",
       sub: "Safety, comfort and punctuality on every trip.",
       cta: "Request a ride",
-      precos: "View price list",
     },
     sobre: {
       tag: "About us",
@@ -172,14 +161,6 @@ const content = {
         "Transfer throughout São Paulo State",
       ],
     },
-    precos: {
-      tag: "Transparency",
-      title: "Price",
-      highlight: "list",
-      thTrajeto: "Route",
-      thValor: "Price",
-      nota: "* Overnight stays (Taubaté and São Vicente) will be charged separately with proof of accommodation, plus the return fare.",
-    },
     como: {
       tag: "Simple and fast",
       title: "How it",
@@ -210,28 +191,12 @@ const content = {
   },
 };
 
-const precos = [
-  { trajeto: "Sorocaba × Aeroporto de Guarulhos (GRU)", valor: "R$ 400,00" },
-  { trajeto: "Sorocaba × Aeroporto de Congonhas (CGH)", valor: "R$ 350,00" },
-  { trajeto: "Sorocaba × Aeroporto de Viracopos (VCP)", valor: "R$ 300,00" },
-  { trajeto: "Sorocaba × Taubaté", valor: "R$ 600,00" },
-  { trajeto: "Sorocaba × São Vicente", valor: "R$ 500,00" },
-  { trajeto: "Sorocaba × Cosmópolis", valor: "R$ 400,00" },
-  { trajeto: "Táxi Sorocaba / Zona Norte", valor: "R$ 80,00" },
-  { trajeto: "Táxi Sorocaba / Zona Sul", valor: "R$ 80,00" },
-  { trajeto: "Táxi Sorocaba / Zona Oeste", valor: "R$ 80,00" },
-  { trajeto: "Táxi Sorocaba / Zona Leste", valor: "R$ 80,00" },
-  { trajeto: "Sorocaba × Votorantim", valor: "R$ 80,00" },
-  { trajeto: "Sorocaba × Itu", valor: "R$ 120,00" },
-];
 
 const servicoIcons = [Plane, Building2, Car, MapPin, Star, CheckCircle];
 const diferencialIcons = [Car, Shield, Zap, Headphones];
 
-type Lang = "pt" | "en";
-
 export default function Home() {
-  const [lang, setLang] = useState<Lang>("pt");
+  const { lang, setLang } = useLang();
   const t = content[lang];
 
   return (
@@ -286,12 +251,6 @@ export default function Home() {
               >
                 {t.hero.cta}
               </Link>
-              <ScrollButton
-                targetId="precos"
-                className="border border-[#444444] text-[#F0F0F0] px-8 py-4 rounded text-center font-semibold hover:border-[#CC0000] transition-colors text-lg"
-              >
-                {t.hero.precos}
-              </ScrollButton>
             </div>
           </div>
         </div>
@@ -394,49 +353,9 @@ export default function Home() {
         </div>
       </section>
 
-      {/* TABELA DE PREÇOS */}
-      <section id="precos" className="py-24 bg-[#1E1E1E]">
-        <div className="max-w-4xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <p className="text-[#CC0000] uppercase tracking-[0.3em] text-sm font-semibold mb-4">
-              {t.precos.tag}
-            </p>
-            <h2
-              className="text-4xl font-bold uppercase text-[#F0F0F0]"
-              style={{ fontFamily: "var(--font-oswald)" }}
-            >
-              {t.precos.title} <span className="text-[#CC0000]">{t.precos.highlight}</span>
-            </h2>
-          </div>
-          <div className="bg-[#2B2B2B] border border-[#444444] rounded-lg overflow-hidden">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-[#CC0000]">
-                  <th className="text-left text-white px-6 py-4 font-semibold">{t.precos.thTrajeto}</th>
-                  <th className="text-right text-white px-6 py-4 font-semibold">{t.precos.thValor}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {precos.map((p, i) => (
-                  <tr
-                    key={p.trajeto}
-                    className={`border-t border-[#444444] hover:bg-[#333333] transition-colors ${
-                      i % 2 === 0 ? "bg-[#2B2B2B]" : "bg-[#272727]"
-                    }`}
-                  >
-                    <td className="px-6 py-4 text-[#F0F0F0] text-sm">{p.trajeto}</td>
-                    <td className="px-6 py-4 text-[#CC0000] font-semibold text-right text-sm">{p.valor}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p className="mt-4 text-[#A0A0A0] text-xs text-center">{t.precos.nota}</p>
-        </div>
-      </section>
 
       {/* COMO FUNCIONA */}
-      <section id="como-funciona" className="py-24 bg-[#2B2B2B]">
+      <section id="como-funciona" className="py-24 bg-[#1E1E1E]">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
             <p className="text-[#CC0000] uppercase tracking-[0.3em] text-sm font-semibold mb-4">
@@ -453,7 +372,7 @@ export default function Home() {
             {t.como.passos.map((p) => (
               <div key={p.num} className="text-center">
                 <div
-                  className="text-7xl font-bold text-[#CC0000]/20 mb-4"
+                  className="text-7xl font-bold text-white/10 mb-4"
                   style={{ fontFamily: "var(--font-oswald)" }}
                 >
                   {p.num}

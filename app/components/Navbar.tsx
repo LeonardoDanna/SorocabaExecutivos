@@ -8,15 +8,29 @@ import { useState, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { logout } from "@/app/actions/auth";
 
-const perfilLabel: Record<string, string> = {
-  admin: "Administrador",
-  motorista: "Motorista",
-  cliente: "Cliente",
+type Lang = "pt" | "en";
+
+const labels = {
+  pt: {
+    sobre: "Sobre", servicos: "Serviços", como: "Como funciona",
+    entrar: "Entrar", cadastrar: "Cadastrar",
+    perfil: "Perfil", tipoConta: "Tipo de conta", meuPerfil: "Meu perfil",
+    meuPainel: "Meu painel", sair: "Sair",
+    roles: { admin: "Administrador", motorista: "Motorista", cliente: "Cliente" },
+  },
+  en: {
+    sobre: "About", servicos: "Services", como: "How it works",
+    entrar: "Sign in", cadastrar: "Sign up",
+    perfil: "Profile", tipoConta: "Account type", meuPerfil: "My profile",
+    meuPainel: "My panel", sair: "Sign out",
+    roles: { admin: "Administrator", motorista: "Driver", cliente: "Client" },
+  },
 };
 
-function PerfilDropdown({ perfil }: { perfil: string }) {
+function PerfilDropdown({ perfil, lang }: { perfil: string; lang: Lang }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const l = labels[lang];
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -35,15 +49,17 @@ function PerfilDropdown({ perfil }: { perfil: string }) {
         className="flex items-center gap-1.5 text-sm text-brand-text border border-[#444444] px-4 py-2 rounded hover:border-brand-red transition-colors"
       >
         <UserCircle size={15} />
-        Perfil
+        {l.perfil}
         <ChevronDown size={13} className={`transition-transform ${dropdownOpen ? "rotate-180" : ""}`} />
       </button>
 
       {dropdownOpen && (
         <div className="absolute right-0 mt-2 w-48 bg-[#2B2B2B] border border-[#444444] rounded-lg shadow-lg overflow-hidden z-50">
           <div className="px-4 py-3 border-b border-[#444444]">
-            <p className="text-[#A0A0A0] text-xs uppercase tracking-wider">Tipo de conta</p>
-            <p className="text-[#F0F0F0] text-sm font-semibold mt-0.5">{perfilLabel[perfil] ?? perfil}</p>
+            <p className="text-[#A0A0A0] text-xs uppercase tracking-wider">{l.tipoConta}</p>
+            <p className="text-[#F0F0F0] text-sm font-semibold mt-0.5">
+              {l.roles[perfil as keyof typeof l.roles] ?? perfil}
+            </p>
           </div>
           <Link
             href="/perfil"
@@ -51,7 +67,7 @@ function PerfilDropdown({ perfil }: { perfil: string }) {
             className="w-full flex items-center gap-2 px-4 py-3 text-sm text-[#F0F0F0] hover:bg-[#333333] transition-colors"
           >
             <User size={15} />
-            Meu perfil
+            {l.meuPerfil}
           </Link>
           {perfil === "motorista" && (
             <Link
@@ -60,7 +76,7 @@ function PerfilDropdown({ perfil }: { perfil: string }) {
               className="w-full flex items-center gap-2 px-4 py-3 text-sm text-[#F0F0F0] hover:bg-[#333333] transition-colors"
             >
               <Car size={15} />
-              Meu painel
+              {l.meuPainel}
             </Link>
           )}
           {perfil === "admin" && (
@@ -80,7 +96,7 @@ function PerfilDropdown({ perfil }: { perfil: string }) {
                 className="w-full flex items-center gap-2 px-4 py-3 text-sm text-[#EF4444] hover:bg-[#333333] transition-colors"
               >
                 <LogOut size={15} />
-                Sair
+                {l.sair}
               </button>
             </form>
           </div>
@@ -90,17 +106,12 @@ function PerfilDropdown({ perfil }: { perfil: string }) {
   );
 }
 
-const navLabels = {
-  pt: { sobre: "Sobre", servicos: "Serviços", precos: "Preços", como: "Como funciona", entrar: "Entrar", cadastrar: "Cadastrar" },
-  en: { sobre: "About", servicos: "Services", precos: "Prices", como: "How it works", entrar: "Sign in", cadastrar: "Sign up" },
-};
-
-export default function Navbar({ lang = "pt" }: { lang?: "pt" | "en" }) {
+export default function Navbar({ lang = "pt" }: { lang?: Lang }) {
   const [open, setOpen] = useState(false);
   const [perfil, setPerfil] = useState<string | null>(null);
   const pathname = usePathname();
   const router = useRouter();
-  const nl = navLabels[lang];
+  const nl = labels[lang];
 
   function handleLogoClick(e: React.MouseEvent) {
     if (pathname === "/") {
@@ -147,13 +158,12 @@ export default function Navbar({ lang = "pt" }: { lang?: "pt" | "en" }) {
         <nav className="hidden md:flex items-center gap-8">
           <Link href="#sobre" onClick={(e) => handleAnchorClick(e, "sobre")} className="text-brand-muted hover:text-brand-text transition-colors text-sm uppercase tracking-wider">{nl.sobre}</Link>
           <Link href="#servicos" onClick={(e) => handleAnchorClick(e, "servicos")} className="text-brand-muted hover:text-brand-text transition-colors text-sm uppercase tracking-wider">{nl.servicos}</Link>
-          <Link href="#precos" onClick={(e) => handleAnchorClick(e, "precos")} className="text-brand-muted hover:text-brand-text transition-colors text-sm uppercase tracking-wider">{nl.precos}</Link>
           <Link href="#como-funciona" onClick={(e) => handleAnchorClick(e, "como-funciona")} className="text-brand-muted hover:text-brand-text transition-colors text-sm uppercase tracking-wider">{nl.como}</Link>
         </nav>
 
         <div className="hidden md:flex items-center gap-3">
           {perfil !== null ? (
-            <PerfilDropdown perfil={perfil} />
+            <PerfilDropdown perfil={perfil} lang={lang} />
           ) : (
             <>
               <Link href="/login" className="text-sm text-brand-text border border-[#444444] px-4 py-2 rounded hover:border-brand-red transition-colors">
@@ -180,23 +190,24 @@ export default function Navbar({ lang = "pt" }: { lang?: "pt" | "en" }) {
         <div className="md:hidden bg-[#2B2B2B] border-t border-[#444444] px-6 py-4 flex flex-col gap-4">
           <Link href="#sobre" onClick={(e) => { setOpen(false); handleAnchorClick(e, "sobre"); }} className="text-brand-muted hover:text-brand-text text-sm uppercase tracking-wider">{nl.sobre}</Link>
           <Link href="#servicos" onClick={(e) => { setOpen(false); handleAnchorClick(e, "servicos"); }} className="text-brand-muted hover:text-brand-text text-sm uppercase tracking-wider">{nl.servicos}</Link>
-          <Link href="#precos" onClick={(e) => { setOpen(false); handleAnchorClick(e, "precos"); }} className="text-brand-muted hover:text-brand-text text-sm uppercase tracking-wider">{nl.precos}</Link>
           <Link href="#como-funciona" onClick={(e) => { setOpen(false); handleAnchorClick(e, "como-funciona"); }} className="text-brand-muted hover:text-brand-text text-sm uppercase tracking-wider">{nl.como}</Link>
           <div className="flex flex-col gap-2 pt-2 border-t border-[#444444]">
             {perfil !== null ? (
               <>
                 <div className="px-4 py-3 bg-[#333333] rounded border border-[#444444]">
-                  <p className="text-[#A0A0A0] text-xs uppercase tracking-wider">Tipo de conta</p>
-                  <p className="text-[#F0F0F0] text-sm font-semibold mt-0.5">{perfilLabel[perfil] ?? perfil}</p>
+                  <p className="text-[#A0A0A0] text-xs uppercase tracking-wider">{nl.tipoConta}</p>
+                  <p className="text-[#F0F0F0] text-sm font-semibold mt-0.5">
+                    {nl.roles[perfil as keyof typeof nl.roles] ?? perfil}
+                  </p>
                 </div>
                 <Link href="/perfil" onClick={() => setOpen(false)} className="flex items-center justify-center gap-2 text-sm text-[#F0F0F0] border border-[#444444] px-4 py-2 rounded">
                   <User size={15} />
-                  Meu perfil
+                  {nl.meuPerfil}
                 </Link>
                 {perfil === "motorista" && (
                   <Link href="/motorista" onClick={() => setOpen(false)} className="flex items-center justify-center gap-2 text-sm text-[#F0F0F0] border border-[#444444] px-4 py-2 rounded">
                     <Car size={15} />
-                    Meu painel
+                    {nl.meuPainel}
                   </Link>
                 )}
                 {perfil === "admin" && (
@@ -208,14 +219,14 @@ export default function Navbar({ lang = "pt" }: { lang?: "pt" | "en" }) {
                 <form action={logout}>
                   <button type="submit" className="w-full flex items-center justify-center gap-2 text-sm text-[#EF4444] border border-[#EF4444]/30 px-4 py-2 rounded">
                     <LogOut size={15} />
-                    Sair
+                    {nl.sair}
                   </button>
                 </form>
               </>
             ) : (
               <>
-                <Link href="/login" onClick={() => setOpen(false)} className="text-center text-sm text-brand-text border border-[#444444] px-4 py-2 rounded">Entrar</Link>
-                <Link href="/cadastro" onClick={() => setOpen(false)} className="text-center text-sm bg-brand-red text-white px-4 py-2 rounded">Cadastrar</Link>
+                <Link href="/login" onClick={() => setOpen(false)} className="text-center text-sm text-brand-text border border-[#444444] px-4 py-2 rounded">{nl.entrar}</Link>
+                <Link href="/cadastro" onClick={() => setOpen(false)} className="text-center text-sm bg-brand-red text-white px-4 py-2 rounded">{nl.cadastrar}</Link>
               </>
             )}
           </div>
