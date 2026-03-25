@@ -10,9 +10,6 @@ Plataforma web de transporte executivo premium focada na região de Sorocaba/SP 
 
 A **Sorocaba Executivos** foi fundada por Vagner Rodrigues Alberto, que iniciou como motorista de aplicativo em 2017 e construiu uma carteira fiel de clientes pelo comprometimento e direção cuidadosa. Hoje conta com uma rede de motoristas experientes e frota de alto padrão, atendendo exclusivamente a região de Sorocaba com agilidade, comodidade e segurança.
 
-**CNPJ:** 48.409.953/0001-34
-**Endereço:** Rua Doutor Lineu Mattos Silveira, 241 — Sorocaba/SP, CEP 18045-435
-
 ---
 
 ## Serviços
@@ -98,38 +95,6 @@ app/
 
 ---
 
-## Como rodar localmente
-
-```bash
-# Instalar dependências
-npm install
-
-# Configurar variáveis de ambiente
-cp .env.example .env.local
-# Preencha as variáveis abaixo no .env.local
-
-# Rodar em desenvolvimento
-npm run dev
-```
-
-Acesse [http://localhost:3000](http://localhost:3000).
-
----
-
-## Variáveis de ambiente
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-NEXTAUTH_SECRET=
-NEXTAUTH_URL=
-RESEND_API_KEY=
-ZAPI_TOKEN=
-```
-
----
-
 ## Ordem de desenvolvimento
 
 1. Telas estáticas com Next.js e Tailwind
@@ -144,32 +109,6 @@ ZAPI_TOKEN=
 ## Idiomas
 
 O site suporta alternância entre **Português** e **Inglês**.
-
----
-
-## Tabela de preços (referência)
-
-| Trajeto | Valor |
-|---|---|
-| Sorocaba × Aeroporto de Viracopos (VCP) | R$ 300,00 |
-| Sorocaba × Aeroporto de Congonhas (CGH) | R$ 350,00 |
-| Sorocaba × Aeroporto de Guarulhos (GRU) | R$ 400,00 |
-| Sorocaba × Cosmópolis | R$ 400,00 |
-| Sorocaba × São Vicente | R$ 500,00 |
-| Sorocaba × Taubaté | R$ 600,00 |
-| Táxi Sorocaba (Zona Norte/Sul/Leste/Oeste) | R$ 80,00 |
-| Sorocaba × Votorantim | R$ 80,00 |
-| Sorocaba × Itu | R$ 120,00 |
-
-> Em caso de pernoite (Taubaté e São Vicente), será cobrado o valor da estadia com comprovante, além do valor do retorno.
-
----
-
-## Hospedagem
-
-- **Vercel** para deploy contínuo (integrado ao GitHub)
-- **Hostinger** para o domínio (`sorocabaexecutivos.com.br`)
-- Apontar DNS da Hostinger para a Vercel nos campos indicados no painel
 
 ---
 
