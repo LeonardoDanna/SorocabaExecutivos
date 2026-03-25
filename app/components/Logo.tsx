@@ -1,19 +1,14 @@
-export default function Logo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
-  const sizes = {
-    sm: "text-xl",
-    md: "text-2xl",
-    lg: "text-4xl",
-  };
+const sizes = { sm: 130, md: 170, lg: 230 };
 
+export default function Logo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
   return (
-    <span
-      className={`font-heading font-bold uppercase tracking-widest ${sizes[size]}`}
-      style={{ fontFamily: "var(--font-oswald)" }}
-    >
-      <span className="text-brand-red">S</span>
-      <span className="text-brand-text">OROCABA </span>
-      <span className="text-brand-red">E</span>
-      <span className="text-brand-text">XECUTIVOS</span>
-    </span>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src="/logo.png"
+      alt="Sorocaba Executivos"
+      width={sizes[size]}
+      height={sizes[size]}
+      style={{ objectFit: "contain", mixBlendMode: "screen", display: "block", margin: "0 auto" }}
+    />
   );
 }
