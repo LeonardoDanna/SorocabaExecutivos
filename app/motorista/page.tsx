@@ -13,7 +13,7 @@ import { logout } from "@/app/actions/auth";
 
 // ── Tipos ──────────────────────────────────────────────────
 
-type StatusViagem = "pendente" | "confirmada" | "em_rota" | "concluida" | "cancelada";
+type StatusViagem = "pendente" | "agendada" | "confirmada" | "em_rota" | "concluida" | "cancelada";
 
 type ViagemDB = {
   id: string;
@@ -37,6 +37,7 @@ type AvaliacaoRow = {
 
 const statusConfig: Record<StatusViagem, { label: string; cor: string; bg: string }> = {
   pendente:   { label: "Pendente",   cor: "#F59E0B", bg: "rgba(245,158,11,0.1)" },
+  agendada:   { label: "Aguard. aceite", cor: "#A855F7", bg: "rgba(168,85,247,0.1)" },
   confirmada: { label: "Confirmada", cor: "#3B82F6", bg: "rgba(59,130,246,0.1)" },
   em_rota:    { label: "Em rota",    cor: "#22C55E", bg: "rgba(34,197,94,0.1)" },
   concluida:  { label: "Concluída",  cor: "#A0A0A0", bg: "rgba(160,160,160,0.1)" },
@@ -124,10 +125,10 @@ export default function MotoristaPainelPage() {
     if (viagemIds.length > 0) {
       const { data: avsData } = await supabase
         .from("avaliacoes")
-        .select("nota, comentario, created_at, avaliador:perfis!avaliador_id(nome)")
+        .select("nota, comentario, created_at")
         .in("viagem_id", viagemIds)
         .order("created_at", { ascending: false });
-      setAvaliacoes((avsData as AvaliacaoRow[]) ?? []);
+      setAvaliacoes((avsData as unknown as AvaliacaoRow[]) ?? []);
     }
 
     setLoading(false);
@@ -143,7 +144,9 @@ export default function MotoristaPainelPage() {
 
   // Dados derivados
   const viagensHoje = viagens.filter((v) => isSameDay(v.data_hora, hoje));
-  const pendentes = viagens.filter((v) => v.status === "confirmada"); // confirmadas = próximas a realizar
+  const pendentes = viagens.filter((v) => v.status === "agendada");
+  const proximas = viagens.filter((v) => ["agendada", "confirmada", "em_rota"].includes(v.status));
+  const feitas   = viagens.filter((v) => ["concluida", "cancelada"].includes(v.status));
 
   const totalConcluidas = viagens.filter((v) => v.status === "concluida").length;
   const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
@@ -293,10 +296,126 @@ export default function MotoristaPainelPage() {
                               <span className="truncate">{v.destino}</span>
                             </div>
                           </div>
-                          <div className="flex items-center gap-3 flex-shrink-0">
+                          <div className="flex items-center gap-2 flex-shrink-0">
                             <p className="text-[#F0F0F0] text-sm font-medium hidden sm:block">{formatValor(v.valor)}</p>
                             <span className="text-xs px-2 py-1 rounded-full font-medium whitespace-nowrap" style={{ color: s.cor, backgroundColor: s.bg }}>{s.label}</span>
+                            {v.status === "confirmada" && (
+                              <button
+                                onClick={() => handleAtualizarStatus(v.id, "em_rota")}
+                                className="text-xs px-3 py-1.5 bg-[#22C55E] text-white rounded font-medium hover:bg-[#16A34A] transition-colors whitespace-nowrap"
+                              >
+                                Iniciar
+                              </button>
+                            )}
+                            {v.status === "em_rota" && (
+                              <button
+                                onClick={() => handleAtualizarStatus(v.id, "concluida")}
+                                className="text-xs px-3 py-1.5 bg-[#3B82F6] text-white rounded font-medium hover:bg-[#2563EB] transition-colors whitespace-nowrap"
+                              >
+                                Concluir
+                              </button>
+                            )}
                           </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Próximas viagens */}
+              <div>
+                <h2 className="text-[#A0A0A0] text-xs uppercase tracking-widest font-semibold mb-3">Próximas viagens</h2>
+                {loading ? (
+                  <p className="text-[#A0A0A0] text-sm animate-pulse text-center py-8">Carregando...</p>
+                ) : proximas.length === 0 ? (
+                  <div className="bg-[#2B2B2B] border border-[#444] rounded-xl p-8 text-center">
+                    <Car size={32} className="text-[#444] mx-auto mb-3" />
+                    <p className="text-[#A0A0A0] text-sm">Nenhuma viagem agendada.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {proximas.map((v) => {
+                      const s = statusConfig[v.status];
+                      const d = new Date(v.data_hora);
+                      return (
+                        <div key={v.id} className="bg-[#2B2B2B] border border-[#444] rounded-xl px-5 py-4 shadow-[0_4px_20px_rgba(0,0,0,0.4)]">
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="text-[#444] text-xs font-mono">#{v.id.slice(0, 8).toUpperCase()}</span>
+                            <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ color: s.cor, backgroundColor: s.bg }}>{s.label}</span>
+                          </div>
+                          <div className="space-y-1.5">
+                            <div className="flex items-center gap-2 text-[#A0A0A0] text-sm"><Navigation size={12} /><span>{v.origem}</span></div>
+                            <div className="flex items-center gap-2 text-[#F0F0F0] text-sm"><MapPin size={12} className="text-[#CC0000]" /><span>{v.destino}</span></div>
+                          </div>
+                          <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#333]">
+                            <div className="flex items-center gap-3 text-[#A0A0A0] text-xs">
+                              <span className="flex items-center gap-1"><Clock size={11} />{d.toLocaleDateString("pt-BR")}</span>
+                              <span>{d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
+                            </div>
+                            <span className="text-[#F0F0F0] text-sm font-semibold">{formatValor(v.valor)}</span>
+                          </div>
+                          {v.cliente && (
+                            <p className="text-[#A0A0A0] text-xs mt-2">Cliente: <span className="text-[#F0F0F0]">{v.cliente.nome}</span></p>
+                          )}
+                          {v.status === "confirmada" && (
+                            <button
+                              onClick={() => handleAtualizarStatus(v.id, "em_rota")}
+                              className="mt-3 w-full text-sm py-2 bg-[#22C55E] text-white rounded font-medium hover:bg-[#16A34A] transition-colors"
+                            >
+                              Iniciar corrida
+                            </button>
+                          )}
+                          {v.status === "em_rota" && (
+                            <button
+                              onClick={() => handleAtualizarStatus(v.id, "concluida")}
+                              className="mt-3 w-full text-sm py-2 bg-[#3B82F6] text-white rounded font-medium hover:bg-[#2563EB] transition-colors"
+                            >
+                              Concluir corrida
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Viagens realizadas */}
+              <div>
+                <h2 className="text-[#A0A0A0] text-xs uppercase tracking-widest font-semibold mb-3">Viagens realizadas</h2>
+                {loading ? (
+                  <p className="text-[#A0A0A0] text-sm animate-pulse text-center py-8">Carregando...</p>
+                ) : feitas.length === 0 ? (
+                  <div className="bg-[#2B2B2B] border border-[#444] rounded-xl p-8 text-center">
+                    <Car size={32} className="text-[#444] mx-auto mb-3" />
+                    <p className="text-[#A0A0A0] text-sm">Nenhuma viagem realizada ainda.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {feitas.map((v) => {
+                      const s = statusConfig[v.status];
+                      const d = new Date(v.data_hora);
+                      return (
+                        <div key={v.id} className="bg-[#2B2B2B] border border-[#444] rounded-xl px-5 py-4 shadow-[0_4px_20px_rgba(0,0,0,0.4)]">
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="text-[#444] text-xs font-mono">#{v.id.slice(0, 8).toUpperCase()}</span>
+                            <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ color: s.cor, backgroundColor: s.bg }}>{s.label}</span>
+                          </div>
+                          <div className="space-y-1.5">
+                            <div className="flex items-center gap-2 text-[#A0A0A0] text-sm"><Navigation size={12} /><span>{v.origem}</span></div>
+                            <div className="flex items-center gap-2 text-[#F0F0F0] text-sm"><MapPin size={12} className="text-[#CC0000]" /><span>{v.destino}</span></div>
+                          </div>
+                          <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#333]">
+                            <div className="flex items-center gap-3 text-[#A0A0A0] text-xs">
+                              <span className="flex items-center gap-1"><Clock size={11} />{d.toLocaleDateString("pt-BR")}</span>
+                              <span>{d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
+                            </div>
+                            <span className="text-[#F0F0F0] text-sm font-semibold">{formatValor(v.valor)}</span>
+                          </div>
+                          {v.cliente && (
+                            <p className="text-[#A0A0A0] text-xs mt-2">Cliente: <span className="text-[#F0F0F0]">{v.cliente.nome}</span></p>
+                          )}
                         </div>
                       );
                     })}
@@ -369,6 +488,7 @@ export default function MotoristaPainelPage() {
                                   <Clock size={14} className="text-[#CC0000]" />
                                   <span className="text-[#CC0000] font-bold">{formatHora(v.data_hora)}</span>
                                   <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ color: s.cor, backgroundColor: s.bg }}>{s.label}</span>
+                                  <span className="text-[#444] text-xs font-mono ml-auto">#{v.id.slice(0, 8).toUpperCase()}</span>
                                 </div>
                                 <p className="text-[#F0F0F0] font-medium">{v.cliente?.nome ?? "Cliente"}</p>
                                 <div className="mt-2 space-y-1">
@@ -404,15 +524,18 @@ export default function MotoristaPainelPage() {
                 <div className="bg-[#2B2B2B] border border-[#444] rounded-xl p-12 text-center">
                   <Bell size={36} className="text-[#444] mx-auto mb-3" />
                   <p className="text-[#F0F0F0] font-medium">Nenhuma solicitação pendente</p>
-                  <p className="text-[#A0A0A0] text-sm mt-1">Novas corridas confirmadas aparecerão aqui.</p>
+                  <p className="text-[#A0A0A0] text-sm mt-1">Novas solicitações de viagem aparecerão aqui.</p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {pendentes.map((v) => (
-                    <div key={v.id} className="bg-[#2B2B2B] border border-[#3B82F6]/30 rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.4)] overflow-hidden">
-                      <div className="px-5 py-3 bg-[#3B82F6]/5 border-b border-[#3B82F6]/20 flex items-center gap-2">
-                        <Bell size={14} className="text-[#3B82F6]" />
-                        <span className="text-[#3B82F6] text-xs font-semibold uppercase tracking-wider">Corrida confirmada</span>
+                    <div key={v.id} className="bg-[#2B2B2B] border border-[#CC0000]/30 rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.4)] overflow-hidden">
+                      <div className="px-5 py-3 bg-[#CC0000]/5 border-b border-[#CC0000]/20 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <Bell size={14} className="text-[#CC0000]" />
+                          <span className="text-[#CC0000] text-xs font-semibold uppercase tracking-wider">Nova solicitação de viagem para você</span>
+                        </div>
+                        <span className="text-[#444] text-xs font-mono">#{v.id.slice(0, 8).toUpperCase()}</span>
                       </div>
                       <div className="p-5 space-y-4">
                         <div className="flex items-start gap-3">
@@ -430,16 +553,16 @@ export default function MotoristaPainelPage() {
                         </div>
                         <div className="flex gap-3">
                           <button
-                            onClick={() => handleAtualizarStatus(v.id, "em_rota")}
-                            className="flex-1 flex items-center justify-center gap-2 bg-[#CC0000] text-white py-2.5 rounded hover:bg-[#E50000] transition-colors text-sm font-medium"
+                            onClick={() => handleAtualizarStatus(v.id, "confirmada")}
+                            className="flex-1 flex items-center justify-center gap-2 bg-[#22C55E] text-white py-2.5 rounded hover:bg-[#16A34A] transition-colors text-sm font-medium"
                           >
-                            <CheckCircle size={16} />Iniciar corrida
+                            <CheckCircle size={16} />Aceitar
                           </button>
                           <button
-                            onClick={() => handleAtualizarStatus(v.id, "cancelada")}
+                            onClick={() => handleAtualizarStatus(v.id, "pendente")}
                             className="flex-1 flex items-center justify-center gap-2 border border-[#444] text-[#A0A0A0] py-2.5 rounded hover:border-[#EF4444] hover:text-[#EF4444] transition-colors text-sm"
                           >
-                            <XCircle size={16} />Cancelar
+                            <XCircle size={16} />Recusar
                           </button>
                         </div>
                       </div>

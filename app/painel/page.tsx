@@ -1,21 +1,21 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect, useTransition, SyntheticEvent } from "react";
 import Link from "next/link";
 import Logo from "../components/Logo";
 import {
-  LayoutDashboard, Car, Users, Bell, BarChart2, LogOut,
-  TrendingUp, Clock, CheckCircle, XCircle, AlertTriangle,
+  LayoutDashboard, Car, Users, BarChart2, LogOut,
+  TrendingUp, AlertTriangle,
   MapPin, Navigation, Star, ChevronRight, Menu, DollarSign,
-  CalendarDays, Plus, X, Loader2,
+  Plus, X, Check, Loader2, Search, Download,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { criarViagem, criarMotorista } from "@/app/actions/admin";
+import { criarViagem, criarMotorista, gerarRelatorioExcel } from "@/app/actions/admin";
 import { logout } from "@/app/actions/auth";
 
 // ── Tipos ──────────────────────────────────────────────────
 
-type StatusViagem = "pendente" | "confirmada" | "em_rota" | "concluida" | "cancelada";
+type StatusViagem = "pendente" | "agendada" | "confirmada" | "em_rota" | "concluida" | "cancelada";
 
 type ViagemDB = {
   id: string;
@@ -43,11 +43,12 @@ type PerfilDB = {
 // ── Configs de estilo ──────────────────────────────────────
 
 const statusViagem: Record<StatusViagem, { label: string; cor: string; bg: string }> = {
-  pendente:   { label: "Pendente",   cor: "#F59E0B", bg: "rgba(245,158,11,0.1)" },
-  confirmada: { label: "Confirmada", cor: "#3B82F6", bg: "rgba(59,130,246,0.1)" },
-  em_rota:    { label: "Em rota",    cor: "#22C55E", bg: "rgba(34,197,94,0.1)" },
-  concluida:  { label: "Concluída",  cor: "#A0A0A0", bg: "rgba(160,160,160,0.1)" },
-  cancelada:  { label: "Cancelada",  cor: "#EF4444", bg: "rgba(239,68,68,0.1)" },
+  pendente:   { label: "Pendente",       cor: "#F59E0B", bg: "rgba(245,158,11,0.1)" },
+  agendada:   { label: "Aguard. aceite", cor: "#A855F7", bg: "rgba(168,85,247,0.1)" },
+  confirmada: { label: "Confirmada",     cor: "#3B82F6", bg: "rgba(59,130,246,0.1)" },
+  em_rota:    { label: "Em rota",        cor: "#22C55E", bg: "rgba(34,197,94,0.1)" },
+  concluida:  { label: "Concluída",      cor: "#A0A0A0", bg: "rgba(160,160,160,0.1)" },
+  cancelada:  { label: "Cancelada",      cor: "#EF4444", bg: "rgba(239,68,68,0.1)" },
 };
 
 // ── Modal base ─────────────────────────────────────────────
@@ -70,6 +71,14 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
 
 // ── Modal Nova Viagem ──────────────────────────────────────
 
+function horaMinutoAtual() {
+  const now = new Date();
+  let h = now.getHours();
+  let m = Math.ceil(now.getMinutes() / 15) * 15;
+  if (m >= 60) { m = 0; h = (h + 1) % 24; }
+  return { h: h.toString().padStart(2, "0"), m: m.toString().padStart(2, "0") };
+}
+
 function NovaViagemModal({
   clientes,
   motoristas,
@@ -83,8 +92,11 @@ function NovaViagemModal({
 }) {
   const [isPending, startTransition] = useTransition();
   const [erro, setErro] = useState("");
+  const { h: hDefault, m: mDefault } = horaMinutoAtual();
+  const [hora, setHora] = useState(hDefault);
+  const [minuto, setMinuto] = useState(mDefault);
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  function handleSubmit(e: SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
     setErro("");
     const formData = new FormData(e.currentTarget);
@@ -139,11 +151,32 @@ function NovaViagemModal({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className={labelCls}>Data *</label>
-            <input name="data" type="date" required className={inputCls} />
+            <input name="data" type="date" required min={new Date().toISOString().split("T")[0]} className={inputCls} />
           </div>
           <div>
             <label className={labelCls}>Hora *</label>
-            <input name="hora" type="time" required className={inputCls} />
+            <input type="hidden" name="hora" value={`${hora}:${minuto}`} />
+            <div className="flex items-center gap-2">
+              <select
+                value={hora}
+                onChange={(e) => setHora(e.target.value)}
+                className={inputCls + " text-center"}
+              >
+                {Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, "0")).map((h) => (
+                  <option key={h} value={h}>{h}</option>
+                ))}
+              </select>
+              <span className="text-[#A0A0A0] font-bold">:</span>
+              <select
+                value={minuto}
+                onChange={(e) => setMinuto(e.target.value)}
+                className={inputCls + " text-center w-20"}
+              >
+                {["00", "15", "30", "45"].map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
@@ -180,7 +213,7 @@ function NovoMotoristaModal({ onClose, onSuccess }: { onClose: () => void; onSuc
   const [isPending, startTransition] = useTransition();
   const [erro, setErro] = useState("");
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  function handleSubmit(e: SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
     setErro("");
     const formData = new FormData(e.currentTarget);
@@ -240,9 +273,181 @@ function NovoMotoristaModal({ onClose, onSuccess }: { onClose: () => void; onSuc
   );
 }
 
+// ── Buscar Viagem ──────────────────────────────────────────
+
+function BuscarViagem({ viagens, motoristas }: { viagens: ViagemDB[]; motoristas: PerfilDB[] }) {
+  const [query, setQuery] = useState("");
+  const [filtroMotorista, setFiltroMotorista] = useState("");
+  const [filtroCliente, setFiltroCliente] = useState("");
+  const [filtroStatus, setFiltroStatus] = useState("");
+
+  // Clientes únicos a partir das viagens
+  const clientes = Array.from(
+    new Map(viagens.map((v) => [v.cliente_id, v.cliente?.nome ?? "—"])).entries()
+  ).map(([id, nome]) => ({ id, nome }));
+
+  const temFiltro = query.trim().length >= 3 || filtroMotorista || filtroCliente || filtroStatus;
+
+  const resultado = temFiltro
+    ? viagens.filter((v) => {
+        if (filtroMotorista && v.motorista_id !== filtroMotorista) return false;
+        if (filtroCliente && v.cliente_id !== filtroCliente) return false;
+        if (filtroStatus && v.status !== filtroStatus) return false;
+        if (query.trim().length >= 3) {
+          const q = query.trim().toLowerCase();
+          return (
+            v.id.toLowerCase().includes(q) ||
+            (v.cliente?.nome ?? "").toLowerCase().includes(q) ||
+            v.origem.toLowerCase().includes(q) ||
+            v.destino.toLowerCase().includes(q)
+          );
+        }
+        return true;
+      })
+    : [];
+
+  const selectCls = "bg-[#2B2B2B] border border-[#444] rounded-lg px-3 py-2.5 text-sm text-[#F0F0F0] focus:outline-none focus:border-[#CC0000] transition-colors";
+
+  function formatDataHora(iso: string) {
+    const d = new Date(iso);
+    return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }) +
+      " às " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  }
+
+  const filtrosAtivos = [filtroMotorista, filtroCliente, filtroStatus].filter(Boolean).length;
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <p className="text-[#CC0000] uppercase tracking-[0.3em] text-xs font-semibold mb-1">Consulta</p>
+        <h1 className="text-3xl font-bold text-[#F0F0F0] uppercase" style={{ fontFamily: "var(--font-oswald)" }}>Buscar Corrida</h1>
+      </div>
+
+      {/* Barra de busca */}
+      <div className="relative">
+        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#A0A0A0]" />
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Buscar por ID, origem ou destino..."
+          className="w-full bg-[#2B2B2B] border border-[#444] rounded-xl pl-10 pr-4 py-3 text-[#F0F0F0] placeholder-[#A0A0A0] focus:outline-none focus:border-[#CC0000] transition-colors"
+        />
+      </div>
+
+      {/* Filtros */}
+      <div className="flex flex-wrap gap-3 items-center">
+        <select value={filtroMotorista} onChange={(e) => setFiltroMotorista(e.target.value)} className={selectCls}>
+          <option value="">Todos os motoristas</option>
+          {motoristas.map((m) => (
+            <option key={m.id} value={m.id}>{m.nome}</option>
+          ))}
+        </select>
+
+        <select value={filtroCliente} onChange={(e) => setFiltroCliente(e.target.value)} className={selectCls}>
+          <option value="">Todos os clientes</option>
+          {clientes.map((c) => (
+            <option key={c.id} value={c.id}>{c.nome}</option>
+          ))}
+        </select>
+
+        <select value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value)} className={selectCls}>
+          <option value="">Todos os status</option>
+          <option value="pendente">Pendente</option>
+          <option value="agendada">Aguard. aceite</option>
+          <option value="confirmada">Confirmada</option>
+          <option value="em_rota">Em rota</option>
+          <option value="concluida">Concluída</option>
+          <option value="cancelada">Cancelada</option>
+        </select>
+
+        {filtrosAtivos > 0 && (
+          <button
+            onClick={() => { setFiltroMotorista(""); setFiltroCliente(""); setFiltroStatus(""); }}
+            className="flex items-center gap-1.5 text-xs text-[#A0A0A0] hover:text-[#EF4444] transition-colors px-2 py-1"
+          >
+            <X size={12} />
+            Limpar filtros ({filtrosAtivos})
+          </button>
+        )}
+      </div>
+
+      {/* Aviso mínimo de caracteres */}
+      {query.trim().length > 0 && query.trim().length < 3 && !filtroMotorista && !filtroCliente && !filtroStatus && (
+        <p className="text-[#A0A0A0] text-sm text-center">Digite ao menos 3 caracteres para buscar por texto.</p>
+      )}
+
+      {/* Sem resultados */}
+      {temFiltro && resultado.length === 0 && (
+        <div className="bg-[#2B2B2B] border border-[#444] rounded-xl p-12 text-center">
+          <Search size={36} className="text-[#444] mx-auto mb-3" />
+          <p className="text-[#F0F0F0] font-medium">Nenhuma corrida encontrada</p>
+          <p className="text-[#A0A0A0] text-sm mt-1">Tente ajustar os filtros ou o texto da busca.</p>
+        </div>
+      )}
+
+      {/* Resultados */}
+      {resultado.length > 0 && (
+        <div className="space-y-4">
+          <p className="text-[#A0A0A0] text-xs">{resultado.length} resultado(s)</p>
+          {resultado.map((v) => {
+            const s = statusViagem[v.status];
+            const motorista = motoristas.find((m) => m.id === v.motorista_id);
+            return (
+              <div key={v.id} className="bg-[#2B2B2B] border border-[#444] rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.4)] overflow-hidden">
+                <div className="flex items-center justify-between px-5 py-3 border-b border-[#444] bg-[#222]">
+                  <span className="text-[#A0A0A0] text-xs font-mono">#{v.id.slice(0, 8).toUpperCase()}</span>
+                  <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ color: s.cor, backgroundColor: s.bg }}>{s.label}</span>
+                </div>
+                <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                  <div className="space-y-2">
+                    <div>
+                      <p className="text-[#A0A0A0] text-xs uppercase tracking-wider mb-0.5">Cliente</p>
+                      <p className="text-[#F0F0F0] font-medium">{v.cliente?.nome ?? "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-[#A0A0A0] text-xs uppercase tracking-wider mb-0.5">Motorista</p>
+                      <p className="text-[#F0F0F0]">{motorista?.nome ?? <span className="text-[#A0A0A0]">Não atribuído</span>}</p>
+                    </div>
+                    <div>
+                      <p className="text-[#A0A0A0] text-xs uppercase tracking-wider mb-0.5">Data / Hora</p>
+                      <p className="text-[#F0F0F0]">{formatDataHora(v.data_hora)}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div>
+                      <p className="text-[#A0A0A0] text-xs uppercase tracking-wider mb-0.5">Origem</p>
+                      <div className="flex items-center gap-1.5 text-[#F0F0F0]">
+                        <Navigation size={12} className="text-[#A0A0A0] flex-shrink-0" />
+                        <span>{v.origem}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-[#A0A0A0] text-xs uppercase tracking-wider mb-0.5">Destino</p>
+                      <div className="flex items-center gap-1.5 text-[#F0F0F0]">
+                        <MapPin size={12} className="text-[#CC0000] flex-shrink-0" />
+                        <span>{v.destino}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-[#A0A0A0] text-xs uppercase tracking-wider mb-0.5">Valor</p>
+                      <p className="text-[#F0F0F0] font-medium">
+                        {v.valor !== null ? v.valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Componente principal ───────────────────────────────────
 
-type Aba = "dashboard" | "viagens" | "motoristas" | "alertas" | "relatorios";
+type Aba = "dashboard" | "viagens" | "motoristas" | "relatorios" | "buscar";
 
 export default function PainelPage() {
   const [abaAtiva, setAbaAtiva] = useState<Aba>("dashboard");
@@ -256,6 +461,10 @@ export default function PainelPage() {
   const [novaViagemOpen, setNovaViagemOpen] = useState(false);
   const [novoMotoristaOpen, setNovoMotoristaOpen] = useState(false);
   const [motoristasSelecionados, setMotoristasSelecionados] = useState<Record<string, string>>({});
+  const [valoresSelecionados, setValoresSelecionados] = useState<Record<string, string>>({});
+  const [editandoValor, setEditandoValor] = useState<string | null>(null);
+  const [valorTemp, setValorTemp] = useState("");
+  const [exportando, setExportando] = useState(false);
 
   async function loadData() {
     const supabase = createClient();
@@ -295,12 +504,38 @@ export default function PainelPage() {
   async function handleAtribuir(viagemId: string) {
     const motoristaId = motoristasSelecionados[viagemId];
     if (!motoristaId) return;
+    const valorRaw = valoresSelecionados[viagemId];
+    const valor = valorRaw ? parseFloat(valorRaw.replace(",", ".")) : null;
     const supabase = createClient();
     await supabase
       .from("viagens")
-      .update({ motorista_id: motoristaId, status: "confirmada" })
+      .update({ motorista_id: motoristaId, status: "agendada", ...(valor ? { valor } : {}) })
       .eq("id", viagemId);
     await loadData();
+  }
+
+  async function handleSalvarValor(viagemId: string) {
+    const valor = valorTemp ? parseFloat(valorTemp.replace(",", ".")) : null;
+    const supabase = createClient();
+    await supabase.from("viagens").update({ valor }).eq("id", viagemId);
+    setEditandoValor(null);
+    await loadData();
+  }
+
+  async function exportarExcel() {
+    setExportando(true);
+    const result = await gerarRelatorioExcel();
+    setExportando(false);
+    if (!result || "erro" in result) return;
+    const { base64, mes } = result;
+    const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+    const blob = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `relatorio-${mes.replace(" ", "-")}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   const pendentes = viagens.filter((v) => v.status === "pendente");
@@ -309,7 +544,7 @@ export default function PainelPage() {
     { id: "dashboard",  label: "Dashboard",  icon: LayoutDashboard },
     { id: "viagens",    label: "Viagens",    icon: Car,      badge: pendentes.length || undefined },
     { id: "motoristas", label: "Motoristas", icon: Users },
-    { id: "alertas",    label: "Alertas",    icon: Bell },
+    { id: "buscar",     label: "Buscar",     icon: Search },
     { id: "relatorios", label: "Relatórios", icon: BarChart2 },
   ];
 
@@ -461,7 +696,7 @@ export default function PainelPage() {
                         const s = statusViagem[v.status];
                         return (
                           <tr key={v.id} className="border-b border-[#333] hover:bg-[#333] transition-colors">
-                            <td className="px-6 py-4 text-[#A0A0A0] text-xs font-mono whitespace-nowrap">#{String(v.numero).padStart(5, "0")}</td>
+                            <td className="px-6 py-4 text-[#A0A0A0] text-xs font-mono whitespace-nowrap">#{v.id.slice(0, 8).toUpperCase()}</td>
                             <td className="px-6 py-4 text-[#F0F0F0] text-sm">{v.cliente?.nome ?? "—"}</td>
                             <td className="px-6 py-4 text-[#A0A0A0] text-sm max-w-[200px] truncate">{v.destino}</td>
                             <td className="px-6 py-4 text-[#A0A0A0] text-sm whitespace-nowrap">{formatDataHora(v.data_hora)}</td>
@@ -531,7 +766,7 @@ export default function PainelPage() {
                         const opcoes = proximosStatus[v.status] ?? [];
                         return (
                           <tr key={v.id} className="border-b border-[#333] hover:bg-[#333] transition-colors">
-                            <td className="px-5 py-4 text-[#A0A0A0] text-xs font-mono whitespace-nowrap">#{String(v.numero).padStart(5, "0")}</td>
+                            <td className="px-5 py-4 text-[#A0A0A0] text-xs font-mono whitespace-nowrap">#{v.id.slice(0, 8).toUpperCase()}</td>
                             <td className="px-5 py-4 text-[#F0F0F0] text-sm font-medium whitespace-nowrap">{v.cliente?.nome ?? "—"}</td>
                             <td className="px-5 py-4 text-sm">
                               <div className="flex items-center gap-1 text-[#A0A0A0]">
@@ -548,6 +783,7 @@ export default function PainelPage() {
                               {v.motorista ? (
                                 <span className="text-[#F0F0F0]">{v.motorista.nome}</span>
                               ) : v.status === "pendente" ? (
+                                <div className="flex flex-col gap-1.5">
                                 <select
                                   value={motoristasSelecionados[v.id] ?? ""}
                                   onChange={(e) => setMotoristasSelecionados((prev) => ({ ...prev, [v.id]: e.target.value }))}
@@ -558,11 +794,50 @@ export default function PainelPage() {
                                     <option key={m.id} value={m.id}>{m.nome}</option>
                                   ))}
                                 </select>
+                                <input
+                                  type="text"
+                                  placeholder="Valor (R$)"
+                                  value={valoresSelecionados[v.id] ?? ""}
+                                  onChange={(e) => setValoresSelecionados((prev) => ({ ...prev, [v.id]: e.target.value }))}
+                                  className="bg-[#1E1E1E] border border-[#444] text-[#F0F0F0] text-xs rounded px-2 py-1.5 focus:outline-none focus:border-[#CC0000] placeholder-[#555] w-full"
+                                />
+                                </div>
                               ) : (
                                 <span className="text-[#A0A0A0] text-xs">—</span>
                               )}
                             </td>
-                            <td className="px-5 py-4 text-[#F0F0F0] text-sm font-medium whitespace-nowrap">{formatValor(v.valor)}</td>
+                            <td className="px-5 py-4 text-sm whitespace-nowrap">
+                              {editandoValor === v.id ? (
+                                <div className="flex items-center gap-1">
+                                  <input
+                                    autoFocus
+                                    type="text"
+                                    value={valorTemp}
+                                    onChange={(e) => setValorTemp(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") handleSalvarValor(v.id);
+                                      if (e.key === "Escape") setEditandoValor(null);
+                                    }}
+                                    placeholder="0,00"
+                                    className="w-24 bg-[#1E1E1E] border border-[#CC0000] text-[#F0F0F0] text-xs rounded px-2 py-1 focus:outline-none"
+                                  />
+                                  <button onClick={() => handleSalvarValor(v.id)} className="text-[#22C55E] hover:text-[#16A34A]"><Check size={14} /></button>
+                                  <button onClick={() => setEditandoValor(null)} className="text-[#A0A0A0] hover:text-[#F0F0F0]"><X size={14} /></button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => {
+                                    if (["concluida", "cancelada"].includes(v.status)) return;
+                                    setEditandoValor(v.id);
+                                    setValorTemp(v.valor ? v.valor.toString() : "");
+                                  }}
+                                  className={`text-[#F0F0F0] font-medium ${!["concluida", "cancelada"].includes(v.status) ? "hover:text-[#CC0000] cursor-pointer" : "cursor-default"}`}
+                                  title={!["concluida", "cancelada"].includes(v.status) ? "Clique para editar" : ""}
+                                >
+                                  {formatValor(v.valor)}
+                                </button>
+                              )}
+                            </td>
                             <td className="px-5 py-4">
                               <span className="text-xs px-2 py-1 rounded-full font-medium whitespace-nowrap" style={{ color: s.cor, backgroundColor: s.bg }}>{s.label}</span>
                             </td>
@@ -677,87 +952,103 @@ export default function PainelPage() {
           )}
 
           {/* ── Relatórios ── */}
-          {abaAtiva === "relatorios" && (
-            <div className="space-y-6">
-              <div>
-                <p className="text-[#CC0000] uppercase tracking-[0.3em] text-xs font-semibold mb-1">Gerencial</p>
-                <h1 className="text-3xl font-bold text-[#F0F0F0] uppercase" style={{ fontFamily: "var(--font-oswald)" }}>Relatórios</h1>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {[
-                  {
-                    label: "Faturamento total",
-                    valor: viagens.filter(v => v.status === "concluida" && v.valor).reduce((acc, v) => acc + (v.valor ?? 0), 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }),
-                    sub: "viagens concluídas",
-                    icon: DollarSign, cor: "#22C55E",
-                  },
-                  {
-                    label: "Viagens concluídas",
-                    valor: viagens.filter(v => v.status === "concluida").length.toString(),
-                    sub: `de ${viagens.length} solicitadas`,
-                    icon: Car, cor: "#3B82F6",
-                  },
-                  {
-                    label: "Ticket médio",
-                    valor: (() => {
-                      const concluidas = viagens.filter(v => v.status === "concluida" && v.valor);
-                      if (!concluidas.length) return "—";
-                      const media = concluidas.reduce((acc, v) => acc + (v.valor ?? 0), 0) / concluidas.length;
-                      return media.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-                    })(),
-                    sub: "por viagem",
-                    icon: TrendingUp, cor: "#F59E0B",
-                  },
-                ].map((k) => {
-                  const Icon = k.icon;
-                  return (
-                    <div key={k.label} className="bg-[#2B2B2B] border border-[#444] rounded-xl p-5 shadow-[0_4px_20px_rgba(0,0,0,0.4)]">
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-[#A0A0A0] text-sm">{k.label}</span>
-                        <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ backgroundColor: k.cor + "22" }}>
-                          <Icon size={18} style={{ color: k.cor }} />
-                        </div>
-                      </div>
-                      <p className="text-3xl font-bold text-[#F0F0F0]">{loading ? "—" : k.valor}</p>
-                      <p className="text-xs text-[#A0A0A0] mt-1">{k.sub}</p>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+          {abaAtiva === "relatorios" && (() => {
+            const concluidas = viagens.filter(v => v.status === "concluida");
+            const faturamentoTotal = concluidas.filter(v => v.valor).reduce((acc, v) => acc + (v.valor ?? 0), 0);
+            const comissao = faturamentoTotal * 0.1;
+            const ticketMedio = concluidas.filter(v => v.valor).length
+              ? faturamentoTotal / concluidas.filter(v => v.valor).length
+              : null;
 
-          {/* ── Alertas ── */}
-          {abaAtiva === "alertas" && (
-            <div className="space-y-6">
-              <div>
-                <p className="text-[#CC0000] uppercase tracking-[0.3em] text-xs font-semibold mb-1">Sistema</p>
-                <h1 className="text-3xl font-bold text-[#F0F0F0] uppercase" style={{ fontFamily: "var(--font-oswald)" }}>Alertas</h1>
-              </div>
-              <div className="bg-[#2B2B2B] border border-[#444] rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.4)] divide-y divide-[#333]">
-                {pendentes.length > 0 ? (
-                  pendentes.map((v) => (
-                    <div key={v.id} className="flex items-start gap-4 px-6 py-4 hover:bg-[#333] transition-colors">
-                      <AlertTriangle size={16} className="text-[#F59E0B] mt-0.5 flex-shrink-0" />
-                      <p className="text-[#F0F0F0] text-sm flex-1">
-                        Viagem pendente sem motorista: <span className="font-medium">{v.cliente?.nome ?? "Cliente"}</span> → {v.destino}
-                      </p>
-                      <span className="text-[#A0A0A0] text-xs whitespace-nowrap flex items-center gap-1">
-                        <Clock size={11} />
-                        {formatDataHora(v.data_hora)}
-                      </span>
-                    </div>
-                  ))
-                ) : (
-                  <div className="px-6 py-8 text-center">
-                    <CheckCircle size={32} className="text-[#22C55E] mx-auto mb-3" />
-                    <p className="text-[#F0F0F0] font-medium">Nenhum alerta pendente</p>
-                    <p className="text-[#A0A0A0] text-sm mt-1">Todas as viagens estão atribuídas.</p>
+            // Faturamento por motorista
+            const porMotorista: Record<string, { nome: string; total: number; viagens: number }> = {};
+            for (const v of concluidas) {
+              if (!v.motorista_id || !v.valor) continue;
+              const nome = v.motorista?.nome ?? "Sem nome";
+              if (!porMotorista[v.motorista_id]) porMotorista[v.motorista_id] = { nome, total: 0, viagens: 0 };
+              porMotorista[v.motorista_id].total += v.valor;
+              porMotorista[v.motorista_id].viagens += 1;
+            }
+            const rankingMotoristas = Object.values(porMotorista).sort((a, b) => b.total - a.total);
+
+            const fmt = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+            return (
+              <div className="space-y-6">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-[#CC0000] uppercase tracking-[0.3em] text-xs font-semibold mb-1">Gerencial</p>
+                    <h1 className="text-3xl font-bold text-[#F0F0F0] uppercase" style={{ fontFamily: "var(--font-oswald)" }}>Relatórios</h1>
                   </div>
-                )}
+                  <button
+                    onClick={exportarExcel}
+                    disabled={exportando}
+                    className="flex items-center gap-2 bg-[#22C55E] text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-[#16A34A] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {exportando ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                    {exportando ? "Gerando..." : "Exportar Excel"}
+                  </button>
+                </div>
+
+                {/* KPIs */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  {[
+                    { label: "Faturamento total",   valor: loading ? "—" : fmt(faturamentoTotal), sub: "viagens concluídas",    icon: DollarSign,  cor: "#22C55E" },
+                    { label: "Comissão (10%)",       valor: loading ? "—" : fmt(comissao),         sub: "a receber",             icon: TrendingUp,  cor: "#CC0000" },
+                    { label: "Viagens concluídas",  valor: loading ? "—" : concluidas.length.toString(), sub: `de ${viagens.length} solicitadas`, icon: Car, cor: "#3B82F6" },
+                    { label: "Ticket médio",         valor: loading ? "—" : (ticketMedio ? fmt(ticketMedio) : "—"), sub: "por viagem", icon: Star, cor: "#F59E0B" },
+                  ].map((k) => {
+                    const Icon = k.icon;
+                    return (
+                      <div key={k.label} className="bg-[#2B2B2B] border border-[#444] rounded-xl p-5 shadow-[0_4px_20px_rgba(0,0,0,0.4)]">
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-[#A0A0A0] text-sm">{k.label}</span>
+                          <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ backgroundColor: k.cor + "22" }}>
+                            <Icon size={18} style={{ color: k.cor }} />
+                          </div>
+                        </div>
+                        <p className="text-2xl font-bold text-[#F0F0F0]">{k.valor}</p>
+                        <p className="text-xs text-[#A0A0A0] mt-1">{k.sub}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Faturamento por motorista */}
+                <div className="bg-[#2B2B2B] border border-[#444] rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.4)]">
+                  <div className="px-6 py-4 border-b border-[#444]">
+                    <h2 className="text-[#F0F0F0] font-semibold">Faturamento por motorista</h2>
+                  </div>
+                  {loading ? (
+                    <p className="px-6 py-8 text-center text-[#A0A0A0] text-sm animate-pulse">Carregando...</p>
+                  ) : rankingMotoristas.length === 0 ? (
+                    <p className="px-6 py-8 text-center text-[#A0A0A0] text-sm">Nenhum dado disponível.</p>
+                  ) : (
+                    <div className="divide-y divide-[#333]">
+                      {rankingMotoristas.map((m, i) => (
+                        <div key={m.nome} className="px-6 py-4 flex items-center gap-4">
+                          <span className="text-[#444] text-sm font-mono w-5 text-right">{i + 1}</span>
+                          <div className="w-9 h-9 rounded-full bg-[#CC0000]/10 border border-[#CC0000]/20 flex items-center justify-center text-[#CC0000] text-sm font-bold flex-shrink-0">
+                            {m.nome.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[#F0F0F0] text-sm font-medium truncate">{m.nome}</p>
+                            <p className="text-[#A0A0A0] text-xs">{m.viagens} viagem{m.viagens !== 1 ? "s" : ""}</p>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <p className="text-[#F0F0F0] font-semibold text-sm">{fmt(m.total)}</p>
+                            <p className="text-[#CC0000] text-xs">10% = {fmt(m.total * 0.1)}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
+
+          {abaAtiva === "buscar" && <BuscarViagem viagens={viagens} motoristas={motoristas} />}
 
         </div>
       </main>

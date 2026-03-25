@@ -1,8 +1,37 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-// Rotas que exigem login
-const PROTECTED_ROUTES = ["/solicitar", "/historico", "/perfil", "/painel"];
+// Rotas públicas (não precisam de login)
+const PUBLIC_ROUTES = ["/", "/login", "/cadastro", "/esqueci-senha", "/atualizar-senha"];
+
+// Rotas por perfil
+const ROTAS_POR_PERFIL: Record<string, string[]> = {
+  admin:     ["/painel"],
+  motorista: ["/motorista"],
+  cliente:   ["/solicitar", "/perfil"],
+};
+
+// Página inicial de cada perfil após login
+const HOME_POR_PERFIL: Record<string, string> = {
+  admin:     "/painel",
+  motorista: "/motorista",
+  cliente:   "/solicitar",
+};
+
+function rotaPermitida(pathname: string, perfil: string): boolean {
+  const permitidas = ROTAS_POR_PERFIL[perfil] ?? [];
+  return permitidas.some((rota) => pathname.startsWith(rota));
+}
+
+function eRotaProtegida(pathname: string): boolean {
+  return Object.values(ROTAS_POR_PERFIL).flat().some((rota) =>
+    pathname.startsWith(rota)
+  );
+}
+
+function eRotaPublica(pathname: string): boolean {
+  return PUBLIC_ROUTES.some((rota) => pathname === rota || pathname.startsWith(rota + "/"));
+}
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -28,25 +57,29 @@ export async function proxy(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
+  const pathname = request.nextUrl.pathname;
+  const perfil = user?.user_metadata?.perfil as string | undefined;
 
-  const isProtected = PROTECTED_ROUTES.some((route) =>
-    request.nextUrl.pathname.startsWith(route)
-  );
-
-  if (isProtected && !user) {
+  // Usuário não logado tentando acessar rota protegida → login
+  if (!user && eRotaProtegida(pathname)) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    url.searchParams.set("redirect", request.nextUrl.pathname);
+    url.searchParams.set("redirect", pathname);
     return NextResponse.redirect(url);
   }
 
-  // Redireciona usuário logado que tenta acessar /login ou /cadastro
-  if (user && (request.nextUrl.pathname === "/login" || request.nextUrl.pathname === "/cadastro")) {
+  // Usuário logado tentando acessar /login ou /cadastro → home do perfil
+  if (user && perfil && (pathname === "/login" || pathname === "/cadastro")) {
     const url = request.nextUrl.clone();
-    url.pathname = "/solicitar";
+    url.pathname = HOME_POR_PERFIL[perfil] ?? "/";
+    return NextResponse.redirect(url);
+  }
+
+  // Usuário logado tentando acessar rota de outro perfil → home do seu perfil
+  if (user && perfil && eRotaProtegida(pathname) && !rotaPermitida(pathname, perfil)) {
+    const url = request.nextUrl.clone();
+    url.pathname = HOME_POR_PERFIL[perfil] ?? "/";
     return NextResponse.redirect(url);
   }
 

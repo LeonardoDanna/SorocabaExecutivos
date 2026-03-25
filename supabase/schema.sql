@@ -92,7 +92,7 @@ CREATE TABLE public.viagens (
   destino      TEXT NOT NULL,
   data_hora    TIMESTAMPTZ NOT NULL,
   status       TEXT NOT NULL DEFAULT 'pendente'
-                 CHECK (status IN ('pendente', 'confirmada', 'em_rota', 'concluida', 'cancelada')),
+                 CHECK (status IN ('pendente', 'agendada', 'confirmada', 'em_rota', 'concluida', 'cancelada')),
   valor        NUMERIC(10,2),
   observacoes  TEXT,
   created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -140,6 +140,16 @@ ALTER TABLE public.avaliacoes ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Usuário vê avaliações das suas viagens"
   ON public.avaliacoes FOR SELECT
   USING (auth.uid() = avaliador_id);
+
+CREATE POLICY "Motorista vê avaliações das suas viagens"
+  ON public.avaliacoes FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.viagens
+      WHERE viagens.id = avaliacoes.viagem_id
+        AND viagens.motorista_id = auth.uid()
+    )
+  );
 
 CREATE POLICY "Usuário cria sua avaliação"
   ON public.avaliacoes FOR INSERT

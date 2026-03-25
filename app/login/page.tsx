@@ -58,9 +58,9 @@ export default function LoginPage() {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-[#A0A0A0] text-sm">Senha</label>
-                <a href="#" className="text-xs text-[#CC0000] hover:text-[#E50000]">
+                <Link href="/esqueci-senha" className="text-xs text-[#CC0000] hover:text-[#E50000]">
                   Esqueci minha senha
-                </a>
+                </Link>
               </div>
               <div className="relative">
                 <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#A0A0A0]" />

@@ -173,7 +173,7 @@ export default function ConfirmacaoPage() {
           {/* Ações */}
           <div className="flex flex-col gap-3">
             <Link
-              href="/historico"
+              href="/perfil"
               className="w-full text-center bg-[#CC0000] text-white py-3 rounded hover:bg-[#E50000] transition-colors font-medium"
             >
               Ver minhas viagens
