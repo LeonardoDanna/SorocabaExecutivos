@@ -32,13 +32,16 @@ export async function login(formData: FormData) {
   const email = formData.get("email") as string;
   const senha = formData.get("senha") as string;
 
-  const { error } = await supabase.auth.signInWithPassword({ email, password: senha });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password: senha });
 
   if (error) {
     return { erro: "E-mail ou senha incorretos." };
   }
 
-  redirect("/solicitar");
+  const perfil = data.user?.user_metadata?.perfil;
+  if (perfil === "admin") redirect("/painel");
+  else if (perfil === "motorista") redirect("/motorista");
+  else redirect("/solicitar");
 }
 
 export async function logout() {

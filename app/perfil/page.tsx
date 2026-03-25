@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Navbar from "../components/Navbar";
 import {
   User,
@@ -13,26 +13,108 @@ import {
   Car,
   Star,
   Calendar,
+  MapPin,
+  Clock,
 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
-// Mock — substituir por dados reais do Supabase depois
-const usuarioMock = {
-  nome: "Ana Paula Souza",
-  email: "ana.paula@email.com",
-  telefone: "(15) 99123-4567",
-  perfil: "cliente",
-  membro_desde: "Janeiro de 2025",
-  total_viagens: 8,
-  avaliacao_media: 4.9,
+const perfilLabel: Record<string, string> = {
+  admin: "Administrador",
+  motorista: "Motorista",
+  cliente: "Cliente",
 };
 
 export default function PerfilPage() {
+  const [loading, setLoading] = useState(true);
   const [editando, setEditando] = useState(false);
-  const [nome, setNome] = useState(usuarioMock.nome);
-  const [telefone, setTelefone] = useState(usuarioMock.telefone);
-  const [nomeTemp, setNomeTemp] = useState(nome);
-  const [telefoneTemp, setTelefoneTemp] = useState(telefone);
+  const [salvando, setSalvando] = useState(false);
   const [salvo, setSalvo] = useState(false);
+  const [erro, setErro] = useState("");
+
+  const [nome, setNome] = useState("");
+  const [email, setEmail] = useState("");
+  const [telefone, setTelefone] = useState("");
+  const [perfilTipo, setPerfilTipo] = useState("");
+  const [membroDesde, setMembroDesde] = useState("");
+  const [totalViagens, setTotalViagens] = useState(0);
+  const [avaliacaoMedia, setAvaliacaoMedia] = useState<number | null>(null);
+
+  type Viagem = {
+    id: string;
+    origem: string;
+    destino: string;
+    data_hora: string;
+    status: string;
+    valor: number | null;
+  };
+  const [proximasViagens, setProximasViagens] = useState<Viagem[]>([]);
+  const [viagensAnteriores, setViagensAnteriores] = useState<Viagem[]>([]);
+
+  const [nomeTemp, setNomeTemp] = useState("");
+  const [telefoneTemp, setTelefoneTemp] = useState("");
+
+  useEffect(() => {
+    async function load() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      setEmail(user.email ?? "");
+
+      const { data: perfil } = await supabase
+        .from("perfis")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+
+      if (perfil) {
+        setNome(perfil.nome);
+        setTelefone(perfil.telefone ?? "");
+        setPerfilTipo(perfil.perfil);
+        const data = new Date(perfil.created_at);
+        const label = data.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+        setMembroDesde(label.charAt(0).toUpperCase() + label.slice(1));
+      }
+
+      const { count } = await supabase
+        .from("viagens")
+        .select("id", { count: "exact", head: true })
+        .eq("cliente_id", user.id);
+      setTotalViagens(count ?? 0);
+
+      const { data: avaliacoes } = await supabase
+        .from("avaliacoes")
+        .select("nota")
+        .eq("avaliador_id", user.id);
+      if (avaliacoes && avaliacoes.length > 0) {
+        const media = avaliacoes.reduce((acc, a) => acc + a.nota, 0) / avaliacoes.length;
+        setAvaliacaoMedia(media);
+      }
+
+      const agora = new Date().toISOString();
+
+      const { data: proximas } = await supabase
+        .from("viagens")
+        .select("id, origem, destino, data_hora, status, valor")
+        .eq("cliente_id", user.id)
+        .neq("status", "cancelada")
+        .gte("data_hora", agora)
+        .order("data_hora", { ascending: true });
+      setProximasViagens(proximas ?? []);
+
+      const { data: anteriores } = await supabase
+        .from("viagens")
+        .select("id, origem, destino, data_hora, status, valor")
+        .eq("cliente_id", user.id)
+        .lt("data_hora", agora)
+        .order("data_hora", { ascending: false })
+        .limit(10);
+      setViagensAnteriores(anteriores ?? []);
+
+      setLoading(false);
+    }
+    load();
+  }, []);
 
   function handleEditar() {
     setNomeTemp(nome);
@@ -42,9 +124,27 @@ export default function PerfilPage() {
 
   function handleCancelar() {
     setEditando(false);
+    setErro("");
   }
 
-  function handleSalvar() {
+  async function handleSalvar() {
+    setSalvando(true);
+    setErro("");
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { error } = await supabase
+      .from("perfis")
+      .upsert({ id: user.id, nome: nomeTemp, telefone: telefoneTemp, perfil: perfilTipo || "cliente" });
+
+    setSalvando(false);
+
+    if (error) {
+      setErro("Erro ao salvar. Tente novamente.");
+      return;
+    }
+
     setNome(nomeTemp);
     setTelefone(telefoneTemp);
     setEditando(false);
@@ -58,6 +158,17 @@ export default function PerfilPage() {
     .slice(0, 2)
     .join("")
     .toUpperCase();
+
+  if (loading) {
+    return (
+      <>
+        <Navbar />
+        <div className="min-h-screen bg-[#1E1E1E] pt-24 flex items-center justify-center">
+          <p className="text-[#A0A0A0] text-sm animate-pulse">Carregando perfil...</p>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -85,24 +196,26 @@ export default function PerfilPage() {
             </div>
             <div className="flex-1 text-center sm:text-left">
               <h2 className="text-xl font-bold text-[#F0F0F0]">{nome}</h2>
-              <p className="text-[#A0A0A0] text-sm mt-0.5 capitalize">{usuarioMock.perfil}</p>
+              <p className="text-[#A0A0A0] text-sm mt-0.5">{perfilLabel[perfilTipo] ?? perfilTipo}</p>
               <p className="text-[#A0A0A0] text-xs mt-1 flex items-center justify-center sm:justify-start gap-1">
                 <Calendar size={12} />
-                Membro desde {usuarioMock.membro_desde}
+                Membro desde {membroDesde}
               </p>
             </div>
             <div className="flex sm:flex-col gap-6 sm:gap-4 text-center">
               <div>
                 <div className="flex items-center justify-center gap-1">
                   <Car size={14} className="text-[#CC0000]" />
-                  <span className="text-xl font-bold text-[#F0F0F0]">{usuarioMock.total_viagens}</span>
+                  <span className="text-xl font-bold text-[#F0F0F0]">{totalViagens}</span>
                 </div>
                 <p className="text-[#A0A0A0] text-xs">Viagens</p>
               </div>
               <div>
                 <div className="flex items-center justify-center gap-1">
                   <Star size={14} className="text-[#F59E0B]" />
-                  <span className="text-xl font-bold text-[#F0F0F0]">{usuarioMock.avaliacao_media}</span>
+                  <span className="text-xl font-bold text-[#F0F0F0]">
+                    {avaliacaoMedia !== null ? avaliacaoMedia.toFixed(1) : "—"}
+                  </span>
                 </div>
                 <p className="text-[#A0A0A0] text-xs">Avaliação</p>
               </div>
@@ -140,16 +253,23 @@ export default function PerfilPage() {
                   </button>
                   <button
                     onClick={handleSalvar}
-                    className="flex items-center gap-1.5 text-sm bg-[#CC0000] text-white px-3 py-1.5 rounded hover:bg-[#E50000] transition-colors"
+                    disabled={salvando}
+                    className="flex items-center gap-1.5 text-sm bg-[#CC0000] text-white px-3 py-1.5 rounded hover:bg-[#E50000] transition-colors disabled:opacity-60"
                   >
                     <Check size={14} />
-                    Salvar
+                    {salvando ? "Salvando..." : "Salvar"}
                   </button>
                 </div>
               )}
             </div>
 
             <div className="p-6 space-y-5">
+              {erro && (
+                <p className="text-[#EF4444] text-sm bg-[#EF4444]/10 border border-[#EF4444]/30 rounded px-4 py-2">
+                  {erro}
+                </p>
+              )}
+
               {/* Nome */}
               <div>
                 <label className="flex items-center gap-2 text-[#A0A0A0] text-xs mb-2 uppercase tracking-wider">
@@ -174,7 +294,7 @@ export default function PerfilPage() {
                   E-mail
                 </label>
                 <p className="text-[#A0A0A0] px-4 py-3 bg-[#1E1E1E] rounded border border-[#333] flex items-center justify-between">
-                  {usuarioMock.email}
+                  {email}
                   <span className="text-xs text-[#444444]">não editável</span>
                 </p>
               </div>
@@ -193,7 +313,9 @@ export default function PerfilPage() {
                     className="w-full bg-[#1E1E1E] border border-[#444444] text-[#F0F0F0] rounded px-4 py-3 focus:outline-none focus:border-[#CC0000] transition-colors"
                   />
                 ) : (
-                  <p className="text-[#F0F0F0] px-4 py-3 bg-[#1E1E1E] rounded border border-[#333]">{telefone}</p>
+                  <p className="text-[#F0F0F0] px-4 py-3 bg-[#1E1E1E] rounded border border-[#333]">
+                    {telefone || <span className="text-[#A0A0A0]">Não informado</span>}
+                  </p>
                 )}
                 {editando && (
                   <p className="text-[#A0A0A0] text-xs mt-1.5">
@@ -201,6 +323,108 @@ export default function PerfilPage() {
                   </p>
                 )}
               </div>
+            </div>
+          </div>
+
+          {/* Próximas viagens */}
+          <div className="bg-[#2B2B2B] border border-[#444444] rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
+            <div className="px-6 py-4 border-b border-[#444444]">
+              <h3 className="text-[#F0F0F0] font-semibold">Próximas viagens</h3>
+            </div>
+            <div className="p-4 space-y-3">
+              {proximasViagens.length === 0 ? (
+                <p className="text-[#A0A0A0] text-sm text-center py-4">Nenhuma viagem agendada.</p>
+              ) : (
+                proximasViagens.map((v) => {
+                  const dt = new Date(v.data_hora);
+                  const data = dt.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+                  const hora = dt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+                  const statusColor: Record<string, string> = {
+                    pendente: "text-[#F59E0B] bg-[#F59E0B]/10 border-[#F59E0B]/30",
+                    confirmada: "text-[#22C55E] bg-[#22C55E]/10 border-[#22C55E]/30",
+                    em_rota: "text-[#3B82F6] bg-[#3B82F6]/10 border-[#3B82F6]/30",
+                  };
+                  const statusLabel: Record<string, string> = {
+                    pendente: "Pendente",
+                    confirmada: "Confirmada",
+                    em_rota: "Em rota",
+                  };
+                  return (
+                    <div key={v.id} className="bg-[#1E1E1E] border border-[#333] rounded-lg p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0 space-y-1.5">
+                          <div className="flex items-center gap-1.5 text-sm text-[#F0F0F0]">
+                            <MapPin size={13} className="text-[#CC0000] flex-shrink-0" />
+                            <span className="truncate">{v.origem}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-sm text-[#A0A0A0]">
+                            <MapPin size={13} className="text-[#A0A0A0] flex-shrink-0" />
+                            <span className="truncate">{v.destino}</span>
+                          </div>
+                        </div>
+                        <span className={`text-xs px-2 py-0.5 rounded border flex-shrink-0 ${statusColor[v.status] ?? "text-[#A0A0A0] bg-[#333] border-[#444]"}`}>
+                          {statusLabel[v.status] ?? v.status}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 mt-3 text-xs text-[#A0A0A0]">
+                        <span className="flex items-center gap-1"><Calendar size={11} />{data}</span>
+                        <span className="flex items-center gap-1"><Clock size={11} />{hora}</span>
+                        {v.valor && <span className="ml-auto text-[#F0F0F0] font-medium">R$ {v.valor.toFixed(2).replace(".", ",")}</span>}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* Viagens anteriores */}
+          <div className="bg-[#2B2B2B] border border-[#444444] rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
+            <div className="px-6 py-4 border-b border-[#444444]">
+              <h3 className="text-[#F0F0F0] font-semibold">Viagens anteriores</h3>
+            </div>
+            <div className="p-4 space-y-3">
+              {viagensAnteriores.length === 0 ? (
+                <p className="text-[#A0A0A0] text-sm text-center py-4">Nenhuma viagem realizada ainda.</p>
+              ) : (
+                viagensAnteriores.map((v) => {
+                  const dt = new Date(v.data_hora);
+                  const data = dt.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+                  const hora = dt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+                  const statusColor: Record<string, string> = {
+                    concluida: "text-[#22C55E] bg-[#22C55E]/10 border-[#22C55E]/30",
+                    cancelada: "text-[#EF4444] bg-[#EF4444]/10 border-[#EF4444]/30",
+                  };
+                  const statusLabel: Record<string, string> = {
+                    concluida: "Concluída",
+                    cancelada: "Cancelada",
+                  };
+                  return (
+                    <div key={v.id} className="bg-[#1E1E1E] border border-[#333] rounded-lg p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0 space-y-1.5">
+                          <div className="flex items-center gap-1.5 text-sm text-[#F0F0F0]">
+                            <MapPin size={13} className="text-[#CC0000] flex-shrink-0" />
+                            <span className="truncate">{v.origem}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-sm text-[#A0A0A0]">
+                            <MapPin size={13} className="text-[#A0A0A0] flex-shrink-0" />
+                            <span className="truncate">{v.destino}</span>
+                          </div>
+                        </div>
+                        <span className={`text-xs px-2 py-0.5 rounded border flex-shrink-0 ${statusColor[v.status] ?? "text-[#A0A0A0] bg-[#333] border-[#444]"}`}>
+                          {statusLabel[v.status] ?? v.status}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 mt-3 text-xs text-[#A0A0A0]">
+                        <span className="flex items-center gap-1"><Calendar size={11} />{data}</span>
+                        <span className="flex items-center gap-1"><Clock size={11} />{hora}</span>
+                        {v.valor && <span className="ml-auto text-[#F0F0F0] font-medium">R$ {v.valor.toFixed(2).replace(".", ",")}</span>}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
 

@@ -32,9 +32,7 @@ CREATE POLICY "Usuário atualiza seu próprio perfil"
 CREATE POLICY "Admin vê todos os perfis"
   ON public.perfis FOR ALL
   USING (
-    EXISTS (
-      SELECT 1 FROM public.perfis p WHERE p.id = auth.uid() AND p.perfil = 'admin'
-    )
+    (auth.jwt() -> 'user_metadata' ->> 'perfil') = 'admin'
   );
 
 -- Trigger para criar perfil automaticamente ao cadastrar
@@ -121,9 +119,7 @@ CREATE POLICY "Motorista atualiza status das suas viagens"
 CREATE POLICY "Admin vê todas as viagens"
   ON public.viagens FOR ALL
   USING (
-    EXISTS (
-      SELECT 1 FROM public.perfis p WHERE p.id = auth.uid() AND p.perfil = 'admin'
-    )
+    (auth.jwt() -> 'user_metadata' ->> 'perfil') = 'admin'
   );
 
 -- ============================================================
