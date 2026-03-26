@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useLang } from "../hooks/useLang";
+import { useLang, type Lang } from "../hooks/useLang";
 import Navbar from "../components/Navbar";
 import {
   User, Mail, Phone, Shield, Edit2, Check, X,

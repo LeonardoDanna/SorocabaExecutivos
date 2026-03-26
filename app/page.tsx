@@ -282,7 +282,7 @@ export default function Home() {
           </button>
         </div>
 
-        <div className="relative max-w-7xl mx-auto px-6 py-24">
+        <div className="relative max-w-7xl mx-auto px-6">
           <div className="max-w-2xl">
             <p className="text-[#CC0000] uppercase tracking-[0.3em] text-sm font-semibold mb-4">
               {t.hero.tag}
