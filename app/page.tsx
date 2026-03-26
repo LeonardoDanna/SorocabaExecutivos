@@ -14,7 +14,8 @@ import {
   Star,
   UserPlus,
   MapPin,
-  CheckCircle,
+  Bus,
+  Globe,
 } from "lucide-react";
 
 // ── Traduções ──────────────────────────────────────────────
@@ -33,12 +34,6 @@ const content = {
       title: "Uma história de",
       highlight: "confiança",
       text: "A Sorocaba Executivos nasceu da dedicação de Vagner, que começou como motorista de aplicativo em 2017 e conquistou a confiança dos passageiros pela direção cuidadosa e comprometimento. Hoje, contamos com uma rede de motoristas experientes e uma frota que preza pelo conforto, criada para atender exclusivamente a região de Sorocaba com agilidade, comodidade e segurança.",
-      stats: [
-        { num: "2017", label: "Fundada em" },
-        { num: "100+", label: "Clientes ativos" },
-        { num: "3", label: "Aeroportos atendidos" },
-        { num: "5★", label: "Avaliação média" },
-      ],
     },
     diferenciais: {
       tag: "Diferenciais",
@@ -61,6 +56,10 @@ const content = {
           title: "Atendimento rápido",
           text: "Nossa central está pronta para atender sua demanda com agilidade e resolver qualquer situação.",
         },
+        {
+          title: "Atendemos com todos os veículos",
+          text: "Carros, vans, micro-ônibus, ônibus executivos, aviões de pequeno porte e helicópteros para cada necessidade.",
+        },
       ],
     },
     servicos: {
@@ -73,7 +72,21 @@ const content = {
         "Táxi executivo em Sorocaba",
         "Traslado para hotéis, spas e resorts",
         "Transporte de VIPs e palestrantes",
-        "Transfer para todo o Estado de SP",
+        "Transfer em todo o território nacional",
+      ],
+    },
+    frota: {
+      tag: "Nossa Frota",
+      title: "Veículos para",
+      highlight: "cada necessidade",
+      sub: "Uma gama completa de veículos para atender todas as suas demandas, de transferências individuais a grupos e viagens de longa distância.",
+      items: [
+        { title: "Carros Executivos", desc: "Sedãs de luxo com motoristas para transfers e viagens executivas." },
+        { title: "Vans Executivas", desc: "Conforto e espaço para grupos, com Wi-Fi e ar-condicionado." },
+        { title: "Micro-Ônibus", desc: "Transporte para grupos de médio porte, ideal para eventos corporativos." },
+        { title: "Ônibus Executivos", desc: "Viagens em grupo com máximo conforto, poltronas leito e entretenimento." },
+        { title: "Táxi Aéreo — Aviões", desc: "Voe de forma rápida e segura para destinos nacionais com nossa frota de jatos." },
+        { title: "Táxi Aéreo — Helicóptero", desc: "Agilidade urbana e transferências rápidas entre aeroportos e pontos estratégicos." },
       ],
     },
     como: {
@@ -118,12 +131,6 @@ const content = {
       title: "A story of",
       highlight: "trust",
       text: "Sorocaba Executivos was born from Vagner's dedication, who started as a rideshare driver in 2017 and earned passengers' trust through careful driving and commitment. Today, we have a network of experienced drivers and a comfort-focused fleet, built to exclusively serve the Sorocaba region with agility, convenience and safety.",
-      stats: [
-        { num: "2017", label: "Founded in" },
-        { num: "100+", label: "Active clients" },
-        { num: "3", label: "Airports served" },
-        { num: "5★", label: "Average rating" },
-      ],
     },
     diferenciais: {
       tag: "Highlights",
@@ -146,6 +153,10 @@ const content = {
           title: "Fast service",
           text: "Our team is ready to handle your request quickly and resolve any situation.",
         },
+        {
+          title: "We serve with all vehicle types",
+          text: "Cars, vans, minibuses, executive coaches, small aircraft and helicopters for every need.",
+        },
       ],
     },
     servicos: {
@@ -158,7 +169,21 @@ const content = {
         "Executive taxi in Sorocaba",
         "Transfer to hotels, spas and resorts",
         "VIP and speaker transportation",
-        "Transfer throughout São Paulo State",
+        "Transfer across the entire national territory",
+      ],
+    },
+    frota: {
+      tag: "Our Fleet",
+      title: "Vehicles for",
+      highlight: "every need",
+      sub: "A complete range of vehicles to meet all your demands, from individual transfers to groups and long-distance trips.",
+      items: [
+        { title: "Executive Cars", desc: "Luxury sedans with bilingual drivers for transfers and executive trips." },
+        { title: "Executive Vans", desc: "Comfort and space for groups, with Wi-Fi and air conditioning." },
+        { title: "Mini Coach", desc: "Mid-size group transport, ideal for corporate events and outings." },
+        { title: "Executive Bus", desc: "Group trips with maximum comfort, reclining seats and entertainment." },
+        { title: "Air Taxi — Aircraft", desc: "Fast and safe flights to national destinations with our jet fleet." },
+        { title: "Air Taxi — Helicopter", desc: "Urban agility and quick transfers between airports and strategic points." },
       ],
     },
     como: {
@@ -192,8 +217,24 @@ const content = {
 };
 
 
-const servicoIcons = [Plane, Building2, Car, MapPin, Star, CheckCircle];
-const diferencialIcons = [Car, Shield, Zap, Headphones];
+const servicoIcons = [Plane, Building2, Car, MapPin, Star, Globe];
+const diferencialIcons = [Car, Shield, Zap, Headphones, Bus];
+const frotaPhotos = [
+  "/toyota-corolla-hibrido-6-1.png",
+  "/Mercedes-Benz-Sprinter-de-luxo-1.png",
+  "/Gemini_Generated_Image_6x09fa6x09fa6x09.png",
+  "/onibus-46lugares-Irizar-i6-Efficient-768x512.png",
+  "/Taxi-principal.jpg",
+  "/taxi-aereo-de-helicoptero-preco-jpg-01-1.jpg",
+];
+const frotaPositions = [
+  "center center",
+  "center center",
+  "center 60%",
+  "center center",
+  "center center",
+  "center center",
+];
 
 export default function Home() {
   const { lang, setLang } = useLang();
@@ -207,6 +248,15 @@ export default function Home() {
       <section className="relative min-h-screen flex items-center pt-20 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-[#1E1E1E] via-[#2B2B2B] to-[#1E1E1E]" />
         <div className="absolute top-0 right-0 w-1/2 h-full bg-[#CC0000]/5 blur-3xl" />
+        {/* Watermark logo */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/logo.png"
+          alt=""
+          aria-hidden="true"
+          className="absolute top-1/2 left-[62%] -translate-x-1/2 -translate-y-1/2 w-[750px] pointer-events-none select-none"
+          style={{ opacity: 0.05, mixBlendMode: "screen" }}
+        />
 
         {/* Toggle PT / EN */}
         <div className="absolute top-24 right-6 z-10 flex items-center gap-1 bg-[#2B2B2B] border border-[#444444] rounded p-1">
@@ -258,35 +308,17 @@ export default function Home() {
 
       {/* SOBRE */}
       <section id="sobre" className="py-24 bg-[#2B2B2B]">
-        <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-16 items-center">
-          <div>
-            <p className="text-[#CC0000] uppercase tracking-[0.3em] text-sm font-semibold mb-4">
-              {t.sobre.tag}
-            </p>
-            <h2
-              className="text-4xl font-bold mb-6 uppercase text-[#F0F0F0]"
-              style={{ fontFamily: "var(--font-oswald)" }}
-            >
-              {t.sobre.title} <span className="text-[#CC0000]">{t.sobre.highlight}</span>
-            </h2>
-            <p className="text-[#A0A0A0] leading-relaxed text-lg">{t.sobre.text}</p>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            {t.sobre.stats.map((item) => (
-              <div
-                key={item.label}
-                className="bg-[#333333] border border-[#444444] rounded-lg p-6 text-center"
-              >
-                <p
-                  className="text-4xl font-bold text-[#CC0000] mb-1"
-                  style={{ fontFamily: "var(--font-oswald)" }}
-                >
-                  {item.num}
-                </p>
-                <p className="text-[#A0A0A0] text-sm">{item.label}</p>
-              </div>
-            ))}
-          </div>
+        <div className="max-w-3xl mx-auto px-6 text-center">
+          <p className="text-[#CC0000] uppercase tracking-[0.3em] text-sm font-semibold mb-4">
+            {t.sobre.tag}
+          </p>
+          <h2
+            className="text-4xl font-bold mb-6 uppercase text-[#F0F0F0]"
+            style={{ fontFamily: "var(--font-oswald)" }}
+          >
+            {t.sobre.title} <span className="text-[#CC0000]">{t.sobre.highlight}</span>
+          </h2>
+          <p className="text-[#A0A0A0] leading-relaxed text-lg">{t.sobre.text}</p>
         </div>
       </section>
 
@@ -304,9 +336,24 @@ export default function Home() {
               {t.diferenciais.title} <span className="text-[#CC0000]">{t.diferenciais.highlight}</span>
             </h2>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {t.diferenciais.items.map((d, i) => {
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {t.diferenciais.items.slice(0, 3).map((d, i) => {
               const Icon = diferencialIcons[i];
+              return (
+                <div
+                  key={d.title}
+                  className="bg-[#2B2B2B] border border-[#444444] rounded-lg p-6 hover:border-[#CC0000] transition-colors group"
+                >
+                  <Icon size={32} className="text-[#CC0000] mb-4 group-hover:scale-110 transition-transform" />
+                  <h3 className="text-[#F0F0F0] font-semibold mb-2">{d.title}</h3>
+                  <p className="text-[#A0A0A0] text-sm leading-relaxed">{d.text}</p>
+                </div>
+              );
+            })}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-6 lg:w-2/3 lg:mx-auto">
+            {t.diferenciais.items.slice(3).map((d, i) => {
+              const Icon = diferencialIcons[3 + i];
               return (
                 <div
                   key={d.title}
@@ -354,8 +401,56 @@ export default function Home() {
       </section>
 
 
+      {/* FROTA */}
+      <section id="frota" className="py-24 bg-[#1E1E1E]">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-4">
+            <p className="text-[#CC0000] uppercase tracking-[0.3em] text-sm font-semibold mb-4">
+              {t.frota.tag}
+            </p>
+            <h2
+              className="text-4xl font-bold uppercase text-[#F0F0F0]"
+              style={{ fontFamily: "var(--font-oswald)" }}
+            >
+              {t.frota.title} <span className="text-[#CC0000]">{t.frota.highlight}</span>
+            </h2>
+            <p className="text-[#A0A0A0] mt-4 max-w-2xl mx-auto">{t.frota.sub}</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-12">
+            {t.frota.items.map((v, i) => (
+              <div
+                key={v.title}
+                className="group bg-[#2B2B2B] border border-[#444444] rounded-xl overflow-hidden hover:border-[#CC0000] transition-colors"
+              >
+                {/* Photo */}
+                <div className="relative h-56 overflow-hidden">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={frotaPhotos[i]}
+                    alt={v.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    style={{ objectPosition: frotaPositions[i] }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#2B2B2B] via-transparent to-transparent" />
+                </div>
+                {/* Info */}
+                <div className="p-6">
+                  <h3
+                    className="text-xl font-bold text-[#F0F0F0] uppercase mb-2"
+                    style={{ fontFamily: "var(--font-oswald)" }}
+                  >
+                    {v.title}
+                  </h3>
+                  <p className="text-[#A0A0A0] text-sm leading-relaxed">{v.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* COMO FUNCIONA */}
-      <section id="como-funciona" className="py-24 bg-[#1E1E1E]">
+      <section id="como-funciona" className="py-24 bg-[#2B2B2B]">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
             <p className="text-[#CC0000] uppercase tracking-[0.3em] text-sm font-semibold mb-4">

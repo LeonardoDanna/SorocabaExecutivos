@@ -12,14 +12,14 @@ type Lang = "pt" | "en";
 
 const labels = {
   pt: {
-    sobre: "Sobre", servicos: "Serviços", como: "Como funciona",
+    sobre: "Sobre", servicos: "Serviços", frota: "Frota", como: "Como funciona",
     entrar: "Entrar", cadastrar: "Cadastrar",
     perfil: "Perfil", tipoConta: "Tipo de conta", meuPerfil: "Meu perfil",
     meuPainel: "Meu painel", sair: "Sair",
     roles: { admin: "Administrador", motorista: "Motorista", cliente: "Cliente" },
   },
   en: {
-    sobre: "About", servicos: "Services", como: "How it works",
+    sobre: "About", servicos: "Services", frota: "Fleet", como: "How it works",
     entrar: "Sign in", cadastrar: "Sign up",
     perfil: "Profile", tipoConta: "Account type", meuPerfil: "My profile",
     meuPainel: "My panel", sair: "Sign out",
@@ -158,6 +158,7 @@ export default function Navbar({ lang = "pt" }: { lang?: Lang }) {
         <nav className="hidden md:flex items-center gap-8">
           <Link href="#sobre" onClick={(e) => handleAnchorClick(e, "sobre")} className="text-brand-muted hover:text-brand-text transition-colors text-sm uppercase tracking-wider">{nl.sobre}</Link>
           <Link href="#servicos" onClick={(e) => handleAnchorClick(e, "servicos")} className="text-brand-muted hover:text-brand-text transition-colors text-sm uppercase tracking-wider">{nl.servicos}</Link>
+          <Link href="#frota" onClick={(e) => handleAnchorClick(e, "frota")} className="text-brand-muted hover:text-brand-text transition-colors text-sm uppercase tracking-wider">{nl.frota}</Link>
           <Link href="#como-funciona" onClick={(e) => handleAnchorClick(e, "como-funciona")} className="text-brand-muted hover:text-brand-text transition-colors text-sm uppercase tracking-wider">{nl.como}</Link>
         </nav>
 
@@ -190,6 +191,7 @@ export default function Navbar({ lang = "pt" }: { lang?: Lang }) {
         <div className="md:hidden bg-[#2B2B2B] border-t border-[#444444] px-6 py-4 flex flex-col gap-4">
           <Link href="#sobre" onClick={(e) => { setOpen(false); handleAnchorClick(e, "sobre"); }} className="text-brand-muted hover:text-brand-text text-sm uppercase tracking-wider">{nl.sobre}</Link>
           <Link href="#servicos" onClick={(e) => { setOpen(false); handleAnchorClick(e, "servicos"); }} className="text-brand-muted hover:text-brand-text text-sm uppercase tracking-wider">{nl.servicos}</Link>
+          <Link href="#frota" onClick={(e) => { setOpen(false); handleAnchorClick(e, "frota"); }} className="text-brand-muted hover:text-brand-text text-sm uppercase tracking-wider">{nl.frota}</Link>
           <Link href="#como-funciona" onClick={(e) => { setOpen(false); handleAnchorClick(e, "como-funciona"); }} className="text-brand-muted hover:text-brand-text text-sm uppercase tracking-wider">{nl.como}</Link>
           <div className="flex flex-col gap-2 pt-2 border-t border-[#444444]">
             {perfil !== null ? (
