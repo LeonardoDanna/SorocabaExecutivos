@@ -14,6 +14,8 @@ export async function solicitarCorrida(formData: FormData) {
   const destino = formData.get("destino") as string;
   const data = formData.get("data") as string;
   const hora = formData.get("hora") as string;
+  const paradasRaw = formData.get("paradas") as string | null;
+  const paradas: string[] = paradasRaw ? JSON.parse(paradasRaw) : [];
 
   if (!origem || !destino || !data || !hora) {
     return { erro: "Preencha todos os campos obrigatórios." };
@@ -29,6 +31,7 @@ export async function solicitarCorrida(formData: FormData) {
     cliente_id: user.id,
     origem,
     destino,
+    paradas,
     data_hora,
     status: "pendente",
   });

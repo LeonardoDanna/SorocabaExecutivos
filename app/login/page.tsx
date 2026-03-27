@@ -19,6 +19,15 @@ const t = {
     entrar: "Entrar",
     semConta: "Ainda não tem conta?",
     cadastrar: "Cadastre-se",
+    erros: {
+      email_invalido: "Informe um e-mail válido com @.",
+      senha_curta: "A senha deve ter pelo menos 6 caracteres.",
+      credenciais_incorretas: "E-mail ou senha incorretos.",
+      email_nao_confirmado: "E-mail ainda não confirmado. Verifique sua caixa de entrada.",
+      rate_limit: "Muitas tentativas. Tente novamente mais tarde.",
+      erro_conexao: "Erro de conexão. Tente novamente.",
+      erro_generico: "Ocorreu um erro. Tente novamente.",
+    },
   },
   en: {
     title: "Welcome back",
@@ -31,25 +40,66 @@ const t = {
     entrar: "Sign in",
     semConta: "Don't have an account?",
     cadastrar: "Sign up",
+    erros: {
+      email_invalido: "Please enter a valid email with @.",
+      senha_curta: "Password must be at least 6 characters.",
+      credenciais_incorretas: "Incorrect email or password.",
+      email_nao_confirmado: "Email not yet confirmed. Please check your inbox.",
+      rate_limit: "Too many attempts. Please try again later.",
+      erro_conexao: "Connection error. Please try again.",
+      erro_generico: "An error occurred. Please try again.",
+    },
   },
 };
 
+type ErroKey = keyof typeof t.pt.erros;
+type Erros = { email?: ErroKey; senha?: ErroKey };
+
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
-  const [erro, setErro] = useState("");
+  const [erro, setErro] = useState<ErroKey | "">("");
+  const [erros, setErros] = useState<Erros>({});
   const [isPending, startTransition] = useTransition();
   const { lang, setLang } = useLang();
   const l = t[lang];
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  function validateField(field: keyof Erros, value: string): ErroKey | "" {
+    if (field === "email")
+      return value.includes("@") && value.includes(".") ? "" : "email_invalido";
+    if (field === "senha")
+      return value.length >= 6 ? "" : "senha_curta";
+    return "";
+  }
+
+  function handleBlur(field: keyof Erros, value: string) {
+    const key = validateField(field, value);
+    setErros((prev) => ({ ...prev, [field]: key || undefined }));
+  }
+
+  function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
     setErro("");
-    const formData = new FormData(e.currentTarget);
+
+    const form = e.currentTarget;
+    const email = (form.elements.namedItem("email") as HTMLInputElement).value;
+    const senha = (form.elements.namedItem("senha") as HTMLInputElement).value;
+
+    const novosErros: Erros = {
+      email: validateField("email", email) || undefined,
+      senha: validateField("senha", senha) || undefined,
+    };
+    setErros(novosErros);
+    if (Object.values(novosErros).some(Boolean)) return;
+
+    const formData = new FormData(form);
     startTransition(async () => {
       const result = await login(formData);
-      if (result?.erro) setErro(result.erro);
+      if (result?.erro) setErro(result.erro as ErroKey);
     });
   }
+
+  const inputClass = (field: keyof Erros) =>
+    `w-full bg-[#2B2B2B] border ${erros[field] ? "border-[#EF4444]" : "border-[#444444]"} text-[#F0F0F0] placeholder-[#A0A0A0] rounded px-4 py-3 pl-10 focus:outline-none focus:border-[#CC0000] transition-colors`;
 
   return (
     <div className="min-h-screen bg-[#1E1E1E] flex items-center justify-center px-4 py-12">
@@ -89,6 +139,8 @@ export default function LoginPage() {
 
         <div className="bg-[#2B2B2B] border border-[#444444] rounded-xl p-8 shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
           <form onSubmit={handleSubmit} className="space-y-5">
+
+            {/* Email */}
             <div>
               <label className="block text-[#A0A0A0] text-sm mb-2">{l.email}</label>
               <div className="relative">
@@ -97,12 +149,15 @@ export default function LoginPage() {
                   name="email"
                   type="email"
                   placeholder="seu@email.com"
+                  onBlur={(e) => handleBlur("email", e.target.value)}
                   required
-                  className="w-full bg-[#2B2B2B] border border-[#444444] text-[#F0F0F0] placeholder-[#A0A0A0] rounded px-4 py-3 pl-10 focus:outline-none focus:border-[#CC0000] transition-colors"
+                  className={inputClass("email")}
                 />
               </div>
+              {erros.email && <p className="text-[#EF4444] text-xs mt-1">{l.erros[erros.email]}</p>}
             </div>
 
+            {/* Senha */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-[#A0A0A0] text-sm">{l.senha}</label>
@@ -116,8 +171,9 @@ export default function LoginPage() {
                   name="senha"
                   type={showPassword ? "text" : "password"}
                   placeholder={l.placeholder_senha}
+                  onBlur={(e) => handleBlur("senha", e.target.value)}
                   required
-                  className="w-full bg-[#2B2B2B] border border-[#444444] text-[#F0F0F0] placeholder-[#A0A0A0] rounded px-4 py-3 pl-10 pr-10 focus:outline-none focus:border-[#CC0000] transition-colors"
+                  className={inputClass("senha") + " pr-10"}
                 />
                 <button
                   type="button"
@@ -127,11 +183,12 @@ export default function LoginPage() {
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
+              {erros.senha && <p className="text-[#EF4444] text-xs mt-1">{l.erros[erros.senha]}</p>}
             </div>
 
             {erro && (
               <p className="text-[#EF4444] text-sm bg-[#EF4444]/10 border border-[#EF4444]/30 rounded px-4 py-2">
-                {erro}
+                {l.erros[erro]}
               </p>
             )}
 

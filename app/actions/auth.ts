@@ -3,6 +3,25 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
+function codigoErro(msg: string): string {
+  const m = msg.toLowerCase();
+  if (m.includes("user already registered") || m.includes("already been registered"))
+    return "email_ja_cadastrado";
+  if (m.includes("invalid email") || m.includes("unable to validate email"))
+    return "email_invalido_servidor";
+  if (m.includes("password should be at least") || m.includes("password is too short"))
+    return "senha_fraca";
+  if (m.includes("email rate limit") || m.includes("rate limit"))
+    return "rate_limit";
+  if (m.includes("invalid login credentials") || m.includes("invalid credentials"))
+    return "credenciais_incorretas";
+  if (m.includes("email not confirmed"))
+    return "email_nao_confirmado";
+  if (m.includes("network") || m.includes("fetch"))
+    return "erro_conexao";
+  return "erro_generico";
+}
+
 export async function cadastrar(formData: FormData) {
   const supabase = await createClient();
 
@@ -20,7 +39,7 @@ export async function cadastrar(formData: FormData) {
   });
 
   if (error) {
-    return { erro: error.message };
+    return { erro: codigoErro(error.message) };
   }
 
   redirect("/solicitar");
@@ -35,7 +54,7 @@ export async function login(formData: FormData) {
   const { data, error } = await supabase.auth.signInWithPassword({ email, password: senha });
 
   if (error) {
-    return { erro: "E-mail ou senha incorretos." };
+    return { erro: codigoErro(error.message) };
   }
 
   const perfil = data.user?.user_metadata?.perfil;

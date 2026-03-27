@@ -90,6 +90,7 @@ CREATE TABLE public.viagens (
   motorista_id UUID REFERENCES public.perfis(id),
   origem       TEXT NOT NULL,
   destino      TEXT NOT NULL,
+  paradas      TEXT[] NOT NULL DEFAULT '{}',
   data_hora    TIMESTAMPTZ NOT NULL,
   status       TEXT NOT NULL DEFAULT 'pendente'
                  CHECK (status IN ('pendente', 'agendada', 'confirmada', 'em_rota', 'concluida', 'cancelada')),
@@ -97,6 +98,9 @@ CREATE TABLE public.viagens (
   observacoes  TEXT,
   created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Migration for existing databases (run once in Supabase SQL Editor):
+-- ALTER TABLE public.viagens ADD COLUMN IF NOT EXISTS paradas TEXT[] NOT NULL DEFAULT '{}';
 
 ALTER TABLE public.viagens ENABLE ROW LEVEL SECURITY;
 

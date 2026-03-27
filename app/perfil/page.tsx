@@ -5,7 +5,7 @@ import { useLang, type Lang } from "../hooks/useLang";
 import Navbar from "../components/Navbar";
 import {
   User, Mail, Phone, Shield, Edit2, Check, X,
-  Car, Star, Calendar, MapPin, Clock,
+  Car, Star, Calendar, MapPin, Clock, ChevronDown,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cancelarViagem } from "@/app/actions/viagens";
@@ -113,7 +113,7 @@ export default function PerfilPage() {
   const [totalViagens, setTotalViagens] = useState(0);
 
   type Viagem = {
-    id: string; origem: string; destino: string;
+    id: string; origem: string; destino: string; paradas: string[];
     data_hora: string; status: string; valor: number | null; avaliacao?: number | null;
   };
   const [proximasViagens, setProximasViagens] = useState<Viagem[]>([]);
@@ -160,14 +160,14 @@ export default function PerfilPage() {
       setTotalViagens(count ?? 0);
 
       const { data: proximas } = await supabase.from("viagens")
-        .select("id, origem, destino, data_hora, status, valor")
+        .select("id, origem, destino, paradas, data_hora, status, valor")
         .eq("cliente_id", user.id)
         .in("status", ["pendente", "agendada", "confirmada", "em_rota"])
         .order("data_hora", { ascending: true });
       setProximasViagens(proximas ?? []);
 
       const { data: anterioresRaw } = await supabase.from("viagens")
-        .select("id, origem, destino, data_hora, status, valor")
+        .select("id, origem, destino, paradas, data_hora, status, valor")
         .eq("cliente_id", user.id)
         .in("status", ["concluida", "cancelada"])
         .order("data_hora", { ascending: false }).limit(10);
@@ -418,13 +418,27 @@ export default function PerfilPage() {
                           {l.statusLabel[v.status as keyof typeof l.statusLabel] ?? v.status}
                         </span>
                       </div>
-                      <div className="space-y-1.5">
+                      <div className="space-y-0.5">
                         <div className="flex items-center gap-1.5 text-sm text-[#F0F0F0]">
                           <MapPin size={13} className="text-[#CC0000] flex-shrink-0" />
                           <span className="truncate">{v.origem}</span>
                         </div>
-                        <div className="flex items-center gap-1.5 text-sm text-[#A0A0A0]">
-                          <MapPin size={13} className="text-[#A0A0A0] flex-shrink-0" />
+                        {(v.paradas ?? []).map((p, i) => (
+                          <div key={i}>
+                            <div className="flex items-center pl-[3px]">
+                              <ChevronDown size={11} className="text-[#555]" />
+                            </div>
+                            <div className="flex items-center gap-1.5 text-sm text-[#A0A0A0]">
+                              <MapPin size={13} className="text-[#666] flex-shrink-0" />
+                              <span className="truncate">{p}</span>
+                            </div>
+                          </div>
+                        ))}
+                        <div className="flex items-center pl-[3px]">
+                          <ChevronDown size={11} className="text-[#555]" />
+                        </div>
+                        <div className="flex items-center gap-1.5 text-sm text-[#D0D0D0]">
+                          <MapPin size={13} className="text-[#D0D0D0] flex-shrink-0" />
                           <span className="truncate">{v.destino}</span>
                         </div>
                       </div>
@@ -487,13 +501,27 @@ export default function PerfilPage() {
                           {l.statusAnterior[v.status as keyof typeof l.statusAnterior] ?? v.status}
                         </span>
                       </div>
-                      <div className="space-y-1.5">
+                      <div className="space-y-0.5">
                         <div className="flex items-center gap-1.5 text-sm text-[#F0F0F0]">
                           <MapPin size={13} className="text-[#CC0000] flex-shrink-0" />
                           <span className="truncate">{v.origem}</span>
                         </div>
-                        <div className="flex items-center gap-1.5 text-sm text-[#A0A0A0]">
-                          <MapPin size={13} className="text-[#A0A0A0] flex-shrink-0" />
+                        {(v.paradas ?? []).map((p, i) => (
+                          <div key={i}>
+                            <div className="flex items-center pl-[3px]">
+                              <ChevronDown size={11} className="text-[#555]" />
+                            </div>
+                            <div className="flex items-center gap-1.5 text-sm text-[#A0A0A0]">
+                              <MapPin size={13} className="text-[#666] flex-shrink-0" />
+                              <span className="truncate">{p}</span>
+                            </div>
+                          </div>
+                        ))}
+                        <div className="flex items-center pl-[3px]">
+                          <ChevronDown size={11} className="text-[#555]" />
+                        </div>
+                        <div className="flex items-center gap-1.5 text-sm text-[#D0D0D0]">
+                          <MapPin size={13} className="text-[#D0D0D0] flex-shrink-0" />
                           <span className="truncate">{v.destino}</span>
                         </div>
                       </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import Navbar from "../components/Navbar";
-import { MapPin, Navigation, Calendar, Clock, ArrowRight } from "lucide-react";
+import { MapPin, Navigation, Calendar, Clock, ArrowRight, Plus, X } from "lucide-react";
 import { useState, useTransition, useEffect, Suspense } from "react";
 import { useLang, type Lang } from "../hooks/useLang";
 import { useSearchParams } from "next/navigation";
@@ -15,7 +15,10 @@ const t = {
     origem: "Local de origem",
     placeholder_origem: "Endereço de partida",
     destino: "Destino",
+    destino_final: "Destino final",
+    parada: "Parada",
     placeholder_destino: "Endereço de destino",
+    adicionar_parada: "Adicionar parada",
     data: "Data",
     horario: "Horário",
     enviando: "Enviando...",
@@ -28,7 +31,10 @@ const t = {
     origem: "Pickup location",
     placeholder_origem: "Departure address",
     destino: "Destination",
+    destino_final: "Final destination",
+    parada: "Stop",
     placeholder_destino: "Destination address",
+    adicionar_parada: "Add stop",
     data: "Date",
     horario: "Time",
     enviando: "Sending...",
@@ -53,7 +59,7 @@ function SolicitarForm({ lang }: { lang: Lang }) {
   const l = t[lang];
   const params = useSearchParams();
   const [origem, setOrigem] = useState(params.get("origem") ?? "");
-  const [destino, setDestino] = useState(params.get("destino") ?? "");
+  const [destinos, setDestinos] = useState<string[]>([params.get("destino") ?? ""]);
   const [hora, setHora] = useState(hDefault);
   const [minuto, setMinuto] = useState(mDefault);
   const [erro, setErro] = useState("");
@@ -63,13 +69,36 @@ function SolicitarForm({ lang }: { lang: Lang }) {
     const o = params.get("origem");
     const d = params.get("destino");
     if (o) setOrigem(o);
-    if (d) setDestino(d);
+    if (d) setDestinos([d]);
   }, [params]);
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  function addDestino() {
+    setDestinos((prev) => [...prev, ""]);
+  }
+
+  function removeDestino(index: number) {
+    setDestinos((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function updateDestino(index: number, value: string) {
+    setDestinos((prev) => prev.map((d, i) => (i === index ? value : d)));
+  }
+
+  function destinoLabel(index: number, total: number) {
+    if (total === 1) return l.destino;
+    if (index === total - 1) return l.destino_final;
+    return `${l.parada} ${index + 1}`;
+  }
+
+  function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
     setErro("");
-    const formData = new FormData(e.currentTarget);
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    const destinoFinal = destinos[destinos.length - 1];
+    const paradas = destinos.slice(0, -1).filter(Boolean);
+    formData.set("destino", destinoFinal);
+    formData.set("paradas", JSON.stringify(paradas));
     startTransition(async () => {
       const result = await solicitarCorrida(formData);
       if (result?.erro) setErro(result.erro);
@@ -98,20 +127,44 @@ function SolicitarForm({ lang }: { lang: Lang }) {
           </div>
         </div>
 
-        <div>
-          <label className="block text-[#A0A0A0] text-sm mb-2">{l.destino}</label>
-          <div className="relative">
-            <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#A0A0A0]" />
-            <input
-              name="destino"
-              type="text"
-              placeholder={l.placeholder_destino}
-              value={destino}
-              onChange={(e) => setDestino(e.target.value)}
-              required
-              className="w-full bg-[#2B2B2B] border border-[#444444] text-[#F0F0F0] placeholder-[#A0A0A0] rounded px-4 py-3 pl-10 focus:outline-none focus:border-[#CC0000] transition-colors"
-            />
-          </div>
+        <div className="space-y-3">
+          {destinos.map((val, i) => (
+            <div key={i}>
+              <label className="block text-[#A0A0A0] text-sm mb-2">
+                {destinoLabel(i, destinos.length)}
+              </label>
+              <div className="relative flex items-center gap-2">
+                <div className="relative flex-1">
+                  <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#A0A0A0]" />
+                  <input
+                    type="text"
+                    placeholder={l.placeholder_destino}
+                    value={val}
+                    onChange={(e) => updateDestino(i, e.target.value)}
+                    required
+                    className="w-full bg-[#2B2B2B] border border-[#444444] text-[#F0F0F0] placeholder-[#A0A0A0] rounded px-4 py-3 pl-10 focus:outline-none focus:border-[#CC0000] transition-colors"
+                  />
+                </div>
+                {destinos.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeDestino(i)}
+                    className="text-[#A0A0A0] hover:text-[#EF4444] transition-colors flex-shrink-0"
+                  >
+                    <X size={18} />
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={addDestino}
+            className="flex items-center gap-1.5 text-sm text-[#CC0000] hover:text-[#E50000] transition-colors mt-1"
+          >
+            <Plus size={15} />
+            {l.adicionar_parada}
+          </button>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
