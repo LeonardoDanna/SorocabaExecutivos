@@ -6,7 +6,7 @@ import Logo from "../components/Logo";
 import {
   LayoutDashboard, Car, Users, BarChart2, LogOut,
   TrendingUp, AlertTriangle,
-  MapPin, Navigation, Star, ChevronRight, Menu, DollarSign,
+  MapPin, Navigation, Star, ChevronRight, ChevronDown, Menu, DollarSign,
   Plus, X, Check, Loader2, Search, Download,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -16,6 +16,13 @@ import { logout } from "@/app/actions/auth";
 // ── Tipos ──────────────────────────────────────────────────
 
 type StatusViagem = "pendente" | "agendada" | "confirmada" | "em_rota" | "concluida" | "cancelada";
+
+function formatPhone(tel: string) {
+  const d = tel.replace(/\D/g, "").slice(0, 11);
+  if (d.length <= 2) return d;
+  if (d.length <= 7) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+}
 
 type ViagemDB = {
   id: string;
@@ -37,6 +44,7 @@ type PerfilDB = {
   telefone: string | null;
   perfil: string;
   ativo: boolean;
+  online: boolean;
   created_at: string;
 };
 
@@ -275,38 +283,34 @@ function NovoMotoristaModal({ onClose, onSuccess }: { onClose: () => void; onSuc
 
 // ── Buscar Viagem ──────────────────────────────────────────
 
-function BuscarViagem({ viagens, motoristas }: { viagens: ViagemDB[]; motoristas: PerfilDB[] }) {
+type Categoria = "corridas" | "motoristas" | "clientes";
+
+function BuscarViagem({ viagens, motoristas, clientes }: { viagens: ViagemDB[]; motoristas: PerfilDB[]; clientes: PerfilDB[] }) {
+  const [categoria, setCategoria] = useState<Categoria>("corridas");
   const [query, setQuery] = useState("");
-  const [filtroMotorista, setFiltroMotorista] = useState("");
-  const [filtroCliente, setFiltroCliente] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("");
 
-  // Clientes únicos a partir das viagens
-  const clientes = Array.from(
-    new Map(viagens.map((v) => [v.cliente_id, v.cliente?.nome ?? "—"])).entries()
-  ).map(([id, nome]) => ({ id, nome }));
+  const q = query.trim().toLowerCase();
 
-  const temFiltro = query.trim().length >= 3 || filtroMotorista || filtroCliente || filtroStatus;
+  const corridasFiltradas = viagens.filter((v) => {
+    if (filtroStatus && v.status !== filtroStatus) return false;
+    if (!q) return true;
+    return (
+      v.id.toLowerCase().includes(q) ||
+      (v.cliente?.nome ?? "").toLowerCase().includes(q) ||
+      (v.motorista?.nome ?? "").toLowerCase().includes(q) ||
+      v.origem.toLowerCase().includes(q) ||
+      v.destino.toLowerCase().includes(q)
+    );
+  });
 
-  const resultado = temFiltro
-    ? viagens.filter((v) => {
-        if (filtroMotorista && v.motorista_id !== filtroMotorista) return false;
-        if (filtroCliente && v.cliente_id !== filtroCliente) return false;
-        if (filtroStatus && v.status !== filtroStatus) return false;
-        if (query.trim().length >= 3) {
-          const q = query.trim().toLowerCase();
-          return (
-            v.id.toLowerCase().includes(q) ||
-            (v.cliente?.nome ?? "").toLowerCase().includes(q) ||
-            v.origem.toLowerCase().includes(q) ||
-            v.destino.toLowerCase().includes(q)
-          );
-        }
-        return true;
-      })
-    : [];
+  const motoristasFiltrados = motoristas.filter((m) =>
+    !q || m.nome.toLowerCase().includes(q) || (m.telefone ?? "").includes(q)
+  );
 
-  const selectCls = "bg-[#2B2B2B] border border-[#444] rounded-lg px-3 py-2.5 text-sm text-[#F0F0F0] focus:outline-none focus:border-[#CC0000] transition-colors";
+  const clientesFiltrados = clientes.filter((c) =>
+    !q || c.nome.toLowerCase().includes(q) || (c.telefone ?? "").includes(q)
+  );
 
   function formatDataHora(iso: string) {
     const d = new Date(iso);
@@ -314,131 +318,176 @@ function BuscarViagem({ viagens, motoristas }: { viagens: ViagemDB[]; motoristas
       " às " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
   }
 
-  const filtrosAtivos = [filtroMotorista, filtroCliente, filtroStatus].filter(Boolean).length;
+  const categorias: { id: Categoria; label: string; count: number }[] = [
+    { id: "corridas",   label: "Corridas",   count: viagens.length },
+    { id: "motoristas", label: "Motoristas", count: motoristas.length },
+    { id: "clientes",   label: "Clientes",   count: clientes.length },
+  ];
 
   return (
     <div className="space-y-6">
       <div>
         <p className="text-[#CC0000] uppercase tracking-[0.3em] text-xs font-semibold mb-1">Consulta</p>
-        <h1 className="text-3xl font-bold text-[#F0F0F0] uppercase" style={{ fontFamily: "var(--font-oswald)" }}>Buscar Corrida</h1>
+        <h1 className="text-3xl font-bold text-[#F0F0F0] uppercase" style={{ fontFamily: "var(--font-oswald)" }}>Buscar</h1>
+      </div>
+
+      {/* Categorias */}
+      <div className="flex gap-2">
+        {categorias.map((c) => (
+          <button
+            key={c.id}
+            onClick={() => { setCategoria(c.id); setQuery(""); setFiltroStatus(""); }}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${
+              categoria === c.id
+                ? "bg-[#CC0000] border-[#CC0000] text-white"
+                : "bg-[#2B2B2B] border-[#444] text-[#A0A0A0] hover:text-[#F0F0F0] hover:border-[#666]"
+            }`}
+          >
+            {c.label}
+            <span className={`text-xs px-1.5 py-0.5 rounded-full ${categoria === c.id ? "bg-white/20" : "bg-[#333]"}`}>
+              {c.count}
+            </span>
+          </button>
+        ))}
       </div>
 
       {/* Barra de busca */}
-      <div className="relative">
-        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#A0A0A0]" />
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar por ID, origem ou destino..."
-          className="w-full bg-[#2B2B2B] border border-[#444] rounded-xl pl-10 pr-4 py-3 text-[#F0F0F0] placeholder-[#A0A0A0] focus:outline-none focus:border-[#CC0000] transition-colors"
-        />
-      </div>
-
-      {/* Filtros */}
-      <div className="flex flex-wrap gap-3 items-center">
-        <select value={filtroMotorista} onChange={(e) => setFiltroMotorista(e.target.value)} className={selectCls}>
-          <option value="">Todos os motoristas</option>
-          {motoristas.map((m) => (
-            <option key={m.id} value={m.id}>{m.nome}</option>
-          ))}
-        </select>
-
-        <select value={filtroCliente} onChange={(e) => setFiltroCliente(e.target.value)} className={selectCls}>
-          <option value="">Todos os clientes</option>
-          {clientes.map((c) => (
-            <option key={c.id} value={c.id}>{c.nome}</option>
-          ))}
-        </select>
-
-        <select value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value)} className={selectCls}>
-          <option value="">Todos os status</option>
-          <option value="pendente">Pendente</option>
-          <option value="agendada">Aguard. aceite</option>
-          <option value="confirmada">Confirmada</option>
-          <option value="em_rota">Em rota</option>
-          <option value="concluida">Concluída</option>
-          <option value="cancelada">Cancelada</option>
-        </select>
-
-        {filtrosAtivos > 0 && (
-          <button
-            onClick={() => { setFiltroMotorista(""); setFiltroCliente(""); setFiltroStatus(""); }}
-            className="flex items-center gap-1.5 text-xs text-[#A0A0A0] hover:text-[#EF4444] transition-colors px-2 py-1"
-          >
-            <X size={12} />
-            Limpar filtros ({filtrosAtivos})
-          </button>
-        )}
-      </div>
-
-      {/* Aviso mínimo de caracteres */}
-      {query.trim().length > 0 && query.trim().length < 3 && !filtroMotorista && !filtroCliente && !filtroStatus && (
-        <p className="text-[#A0A0A0] text-sm text-center">Digite ao menos 3 caracteres para buscar por texto.</p>
-      )}
-
-      {/* Sem resultados */}
-      {temFiltro && resultado.length === 0 && (
-        <div className="bg-[#2B2B2B] border border-[#444] rounded-xl p-12 text-center">
-          <Search size={36} className="text-[#444] mx-auto mb-3" />
-          <p className="text-[#F0F0F0] font-medium">Nenhuma corrida encontrada</p>
-          <p className="text-[#A0A0A0] text-sm mt-1">Tente ajustar os filtros ou o texto da busca.</p>
+      <form onSubmit={(e) => e.preventDefault()} className="flex gap-3">
+        <div className="relative flex-1">
+          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#A0A0A0]" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={
+              categoria === "corridas" ? "Filtrar por ID, cliente, motorista, origem ou destino..." :
+              categoria === "motoristas" ? "Filtrar por nome ou telefone..." :
+              "Filtrar por nome ou telefone..."
+            }
+            className="w-full bg-[#2B2B2B] border border-[#444] rounded-xl pl-10 pr-4 py-3 text-[#F0F0F0] placeholder-[#A0A0A0] focus:outline-none focus:border-[#CC0000] transition-colors"
+          />
         </div>
-      )}
+        {categoria === "corridas" && (
+          <select
+            value={filtroStatus}
+            onChange={(e) => setFiltroStatus(e.target.value)}
+            className="bg-[#2B2B2B] border border-[#444] rounded-xl px-3 py-2.5 text-sm text-[#F0F0F0] focus:outline-none focus:border-[#CC0000] transition-colors"
+          >
+            <option value="">Todos os status</option>
+            <option value="pendente">Pendente</option>
+            <option value="agendada">Aguard. aceite</option>
+            <option value="confirmada">Confirmada</option>
+            <option value="em_rota">Em rota</option>
+            <option value="concluida">Concluída</option>
+            <option value="cancelada">Cancelada</option>
+          </select>
+        )}
+      </form>
 
-      {/* Resultados */}
-      {resultado.length > 0 && (
-        <div className="space-y-4">
-          <p className="text-[#A0A0A0] text-xs">{resultado.length} resultado(s)</p>
-          {resultado.map((v) => {
-            const s = statusViagem[v.status];
-            const motorista = motoristas.find((m) => m.id === v.motorista_id);
-            return (
-              <div key={v.id} className="bg-[#2B2B2B] border border-[#444] rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.4)] overflow-hidden">
-                <div className="flex items-center justify-between px-5 py-3 border-b border-[#444] bg-[#222]">
-                  <span className="text-[#A0A0A0] text-xs font-mono">#{v.id.slice(0, 8).toUpperCase()}</span>
-                  <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ color: s.cor, backgroundColor: s.bg }}>{s.label}</span>
-                </div>
-                <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                  <div className="space-y-2">
-                    <div>
-                      <p className="text-[#A0A0A0] text-xs uppercase tracking-wider mb-0.5">Cliente</p>
-                      <p className="text-[#F0F0F0] font-medium">{v.cliente?.nome ?? "—"}</p>
-                    </div>
-                    <div>
-                      <p className="text-[#A0A0A0] text-xs uppercase tracking-wider mb-0.5">Motorista</p>
-                      <p className="text-[#F0F0F0]">{motorista?.nome ?? <span className="text-[#A0A0A0]">Não atribuído</span>}</p>
-                    </div>
-                    <div>
-                      <p className="text-[#A0A0A0] text-xs uppercase tracking-wider mb-0.5">Data / Hora</p>
-                      <p className="text-[#F0F0F0]">{formatDataHora(v.data_hora)}</p>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <div>
-                      <p className="text-[#A0A0A0] text-xs uppercase tracking-wider mb-0.5">Origem</p>
-                      <div className="flex items-center gap-1.5 text-[#F0F0F0]">
-                        <Navigation size={12} className="text-[#A0A0A0] flex-shrink-0" />
-                        <span>{v.origem}</span>
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-[#A0A0A0] text-xs uppercase tracking-wider mb-0.5">Destino</p>
-                      <div className="flex items-center gap-1.5 text-[#F0F0F0]">
-                        <MapPin size={12} className="text-[#CC0000] flex-shrink-0" />
-                        <span>{v.destino}</span>
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-[#A0A0A0] text-xs uppercase tracking-wider mb-0.5">Valor</p>
-                      <p className="text-[#F0F0F0] font-medium">
-                        {v.valor !== null ? v.valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
+      {/* Resultados — Usuários (motoristas ou clientes) */}
+      {(categoria === "motoristas" || categoria === "clientes") && (() => {
+        const lista = categoria === "motoristas" ? motoristasFiltrados : clientesFiltrados;
+        return (
+          <div className="space-y-3">
+            <p className="text-[#A0A0A0] text-xs">{lista.length} registro(s)</p>
+            {lista.length === 0 ? (
+              <div className="bg-[#2B2B2B] border border-[#444] rounded-xl p-12 text-center">
+                <Search size={36} className="text-[#444] mx-auto mb-3" />
+                <p className="text-[#F0F0F0] font-medium">Nenhum resultado</p>
               </div>
-            );
-          })}
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {lista.map((u) => {
+                  const iniciais = u.nome.split(" ").map((n: string) => n[0]).slice(0, 2).join("").toUpperCase();
+                  return (
+                    <div key={u.id} className="bg-[#2B2B2B] border border-[#444] rounded-xl p-4 flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-[#333] flex items-center justify-center text-[#F0F0F0] text-sm font-bold flex-shrink-0">
+                        {iniciais}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[#F0F0F0] font-medium text-sm truncate">{u.nome}</p>
+                        <p className="text-[#A0A0A0] text-xs mt-0.5">
+                          {u.telefone ? (
+                            <a href={`https://wa.me/55${u.telefone.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:opacity-70">
+                              {formatPhone(u.telefone)}
+                            </a>
+                          ) : "Sem telefone"}
+                        </p>
+                      </div>
+                      {categoria === "motoristas" && (
+                        <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${(u as PerfilDB).online ? "text-[#22C55E] bg-[#22C55E]/10" : "text-[#A0A0A0] bg-[#333]"}`}>
+                          {(u as PerfilDB).online ? "Online" : "Offline"}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* Resultados — Corridas */}
+      {categoria === "corridas" && (
+        <div className="space-y-3">
+          <p className="text-[#A0A0A0] text-xs">{corridasFiltradas.length} registro(s)</p>
+          {corridasFiltradas.length === 0 ? (
+            <div className="bg-[#2B2B2B] border border-[#444] rounded-xl p-12 text-center">
+              <Search size={36} className="text-[#444] mx-auto mb-3" />
+              <p className="text-[#F0F0F0] font-medium">Nenhuma corrida encontrada</p>
+            </div>
+          ) : (
+            corridasFiltradas.map((v) => {
+              const s = statusViagem[v.status];
+              const motorista = motoristas.find((m) => m.id === v.motorista_id);
+              return (
+                <div key={v.id} className="bg-[#2B2B2B] border border-[#444] rounded-xl overflow-hidden">
+                  <div className="flex items-center justify-between px-5 py-3 border-b border-[#444] bg-[#222]">
+                    <span className="text-[#A0A0A0] text-xs font-mono">#{v.id.slice(0, 8).toUpperCase()}</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ color: s.cor, backgroundColor: s.bg }}>{s.label}</span>
+                  </div>
+                  <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                    <div className="space-y-2">
+                      <div>
+                        <p className="text-[#A0A0A0] text-xs uppercase tracking-wider mb-0.5">Cliente</p>
+                        <p className="text-[#F0F0F0] font-medium">{v.cliente?.nome ?? "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-[#A0A0A0] text-xs uppercase tracking-wider mb-0.5">Motorista</p>
+                        <p className="text-[#F0F0F0]">{motorista?.nome ?? <span className="text-[#A0A0A0]">Não atribuído</span>}</p>
+                      </div>
+                      <div>
+                        <p className="text-[#A0A0A0] text-xs uppercase tracking-wider mb-0.5">Data / Hora</p>
+                        <p className="text-[#F0F0F0]">{formatDataHora(v.data_hora)}</p>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div>
+                        <p className="text-[#A0A0A0] text-xs uppercase tracking-wider mb-0.5">Origem</p>
+                        <div className="flex items-center gap-1.5 text-[#F0F0F0]">
+                          <Navigation size={12} className="text-[#A0A0A0] flex-shrink-0" />
+                          <span>{v.origem}</span>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-[#A0A0A0] text-xs uppercase tracking-wider mb-0.5">Destino</p>
+                        <div className="flex items-center gap-1.5 text-[#F0F0F0]">
+                          <MapPin size={12} className="text-[#CC0000] flex-shrink-0" />
+                          <span>{v.destino}</span>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-[#A0A0A0] text-xs uppercase tracking-wider mb-0.5">Valor</p>
+                        <p className="text-[#F0F0F0] font-medium">
+                          {v.valor !== null ? v.valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
       )}
     </div>
@@ -451,6 +500,7 @@ type Aba = "dashboard" | "viagens" | "motoristas" | "relatorios" | "buscar";
 
 export default function PainelPage() {
   const [abaAtiva, setAbaAtiva] = useState<Aba>("dashboard");
+  const [periodoConcluidas, setPeriodoConcluidas] = useState<"30d" | "3m" | "all">("30d");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [viagens, setViagens] = useState<ViagemDB[]>([]);
@@ -463,8 +513,10 @@ export default function PainelPage() {
   const [motoristasSelecionados, setMotoristasSelecionados] = useState<Record<string, string>>({});
   const [valoresSelecionados, setValoresSelecionados] = useState<Record<string, string>>({});
   const [editandoValor, setEditandoValor] = useState<string | null>(null);
+  const [errosViagem, setErrosViagem] = useState<Record<string, string>>({});
   const [valorTemp, setValorTemp] = useState("");
   const [exportando, setExportando] = useState(false);
+  const [menuMotorista, setMenuMotorista] = useState<string | null>(null);
 
   async function loadData() {
     const supabase = createClient();
@@ -478,7 +530,6 @@ export default function PainelPage() {
         .from("perfis")
         .select("*")
         .eq("perfil", "motorista")
-        .eq("ativo", true)
         .order("nome"),
       supabase
         .from("perfis")
@@ -493,9 +544,40 @@ export default function PainelPage() {
     setLoading(false);
   }
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => {
+    loadData();
+    const supabase = createClient();
+    const sub = supabase
+      .channel("motoristas-online")
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "perfis" }, () => {
+        supabase
+          .from("perfis")
+          .select("*")
+          .eq("perfil", "motorista")
+          .eq("ativo", true)
+          .order("nome")
+          .then(({ data }) => { if (data) setMotoristas(data); });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(sub); };
+  }, []);
+
+  async function handleToggleAtivo(motoristaId: string, ativoAtual: boolean) {
+    const supabase = createClient();
+    await supabase.from("perfis").update({ ativo: !ativoAtual }).eq("id", motoristaId);
+    setMenuMotorista(null);
+    await loadData();
+  }
 
   async function handleMudarStatus(viagemId: string, novoStatus: StatusViagem) {
+    if (novoStatus === "confirmada") {
+      const viagem = viagens.find((v) => v.id === viagemId);
+      if (!viagem?.motorista_id || !viagem?.valor) {
+        setErrosViagem((prev) => ({ ...prev, [viagemId]: "Atribua motorista e valor antes de confirmar." }));
+        return;
+      }
+    }
+    setErrosViagem((prev) => { const n = { ...prev }; delete n[viagemId]; return n; });
     const supabase = createClient();
     await supabase.from("viagens").update({ status: novoStatus }).eq("id", viagemId);
     await loadData();
@@ -505,7 +587,12 @@ export default function PainelPage() {
     const motoristaId = motoristasSelecionados[viagemId];
     if (!motoristaId) return;
     const valorRaw = valoresSelecionados[viagemId];
-    const valor = valorRaw ? parseFloat(valorRaw.replace(",", ".")) : null;
+    if (!valorRaw || valorRaw.trim() === "") {
+      setErrosViagem((prev) => ({ ...prev, [viagemId]: "Informe o valor antes de confirmar." }));
+      return;
+    }
+    setErrosViagem((prev) => { const n = { ...prev }; delete n[viagemId]; return n; });
+    const valor = parseFloat(valorRaw.replace(",", "."));
     const supabase = createClient();
     await supabase
       .from("viagens")
@@ -649,12 +736,10 @@ export default function PainelPage() {
                 <h1 className="text-3xl font-bold text-[#F0F0F0] uppercase" style={{ fontFamily: "var(--font-oswald)" }}>Dashboard</h1>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                 {[
-                  { label: "Viagens ativas",         valor: viagens.filter(v => ["pendente","confirmada","em_rota"].includes(v.status)).length.toString(), icon: Car,        cor: "#CC0000", delta: `${pendentes.length} pendente(s)` },
-                  { label: "Motoristas cadastrados",  valor: motoristas.length.toString(),                                                                  icon: Users,      cor: "#22C55E", delta: "no sistema" },
-                  { label: "Viagens concluídas",      valor: viagens.filter(v => v.status === "concluida").length.toString(),                               icon: TrendingUp, cor: "#3B82F6", delta: "total" },
-                  { label: "Total de clientes",       valor: clientes.length.toString(),                                                                    icon: Star,       cor: "#F59E0B", delta: "cadastrados" },
+                  { label: "Viagens ativas",   valor: viagens.filter(v => ["confirmada","em_rota"].includes(v.status)).length.toString(), icon: Car,  cor: "#CC0000", delta: `${pendentes.length} pendente(s)` },
+                  { label: "Total de clientes", valor: clientes.length.toString(),                                                                    icon: Star, cor: "#F59E0B", delta: "cadastrados" },
                 ].map((kpi) => {
                   const Icon = kpi.icon;
                   return (
@@ -670,6 +755,40 @@ export default function PainelPage() {
                     </div>
                   );
                 })}
+
+                {/* Card Viagens concluídas com dropdown de período */}
+                {(() => {
+                  const agora = new Date();
+                  const corte = new Date(agora);
+                  if (periodoConcluidas === "30d") corte.setDate(agora.getDate() - 30);
+                  else if (periodoConcluidas === "3m") corte.setMonth(agora.getMonth() - 3);
+                  const count = periodoConcluidas === "all"
+                    ? viagens.filter(v => v.status === "concluida").length
+                    : viagens.filter(v => v.status === "concluida" && new Date(v.data_hora) >= corte).length;
+                  return (
+                    <div className="bg-[#2B2B2B] border border-[#444] rounded-xl p-5 shadow-[0_4px_20px_rgba(0,0,0,0.4)]">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-[#A0A0A0] text-sm">Viagens concluídas</span>
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={periodoConcluidas}
+                            onChange={(e) => setPeriodoConcluidas(e.target.value as "30d" | "3m")}
+                            className="bg-[#1E1E1E] border border-[#444] text-[#A0A0A0] text-xs rounded px-2 py-1 focus:outline-none focus:border-[#CC0000] transition-colors"
+                          >
+                            <option value="30d">Últimos 30 dias</option>
+                            <option value="3m">Últimos 3 meses</option>
+                            <option value="all">Desde sempre</option>
+                          </select>
+                          <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-[#3B82F622]">
+                            <TrendingUp size={18} color="#3B82F6" />
+                          </div>
+                        </div>
+                      </div>
+                      <p className="text-3xl font-bold text-[#F0F0F0]">{loading ? "—" : count}</p>
+                      <p className="text-xs text-[#A0A0A0] mt-1">{periodoConcluidas === "30d" ? "últimos 30 dias" : periodoConcluidas === "3m" ? "últimos 3 meses" : "desde sempre"}</p>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Viagens recentes */}
@@ -763,7 +882,10 @@ export default function PainelPage() {
                           confirmada: ["cancelada"],
                           em_rota:    ["concluida", "cancelada"],
                         };
-                        const opcoes = proximosStatus[v.status] ?? [];
+                        const podeConfirmar = !!(v.motorista_id && v.valor);
+                        const opcoes = (proximosStatus[v.status] ?? []).filter(
+                          (st) => st !== "confirmada" || podeConfirmar
+                        );
                         return (
                           <tr key={v.id} className="border-b border-[#333] hover:bg-[#333] transition-colors">
                             <td className="px-5 py-4 text-[#A0A0A0] text-xs font-mono whitespace-nowrap">#{v.id.slice(0, 8).toUpperCase()}</td>
@@ -773,7 +895,10 @@ export default function PainelPage() {
                                 <Navigation size={12} className="flex-shrink-0" />
                                 <span className="truncate max-w-[120px]">{v.origem}</span>
                               </div>
-                              <div className="flex items-center gap-1 text-[#F0F0F0] mt-0.5">
+                              <div className="flex items-center pl-[3px]">
+                                <ChevronDown size={11} className="text-[#555]" />
+                              </div>
+                              <div className="flex items-center gap-1 text-[#F0F0F0]">
                                 <MapPin size={12} className="flex-shrink-0 text-[#CC0000]" />
                                 <span className="truncate max-w-[120px]">{v.destino}</span>
                               </div>
@@ -825,23 +950,18 @@ export default function PainelPage() {
                                   <button onClick={() => setEditandoValor(null)} className="text-[#A0A0A0] hover:text-[#F0F0F0]"><X size={14} /></button>
                                 </div>
                               ) : (
-                                <button
-                                  onClick={() => {
-                                    if (["concluida", "cancelada"].includes(v.status)) return;
-                                    setEditandoValor(v.id);
-                                    setValorTemp(v.valor ? v.valor.toString() : "");
-                                  }}
-                                  className={`text-[#F0F0F0] font-medium ${!["concluida", "cancelada"].includes(v.status) ? "hover:text-[#CC0000] cursor-pointer" : "cursor-default"}`}
-                                  title={!["concluida", "cancelada"].includes(v.status) ? "Clique para editar" : ""}
-                                >
+                                <span className="text-[#F0F0F0] font-medium">
                                   {formatValor(v.valor)}
-                                </button>
+                                </span>
                               )}
                             </td>
                             <td className="px-5 py-4">
                               <span className="text-xs px-2 py-1 rounded-full font-medium whitespace-nowrap" style={{ color: s.cor, backgroundColor: s.bg }}>{s.label}</span>
                             </td>
                             <td className="px-5 py-4">
+                              {errosViagem[v.id] && (
+                                <p className="text-[#EF4444] text-xs mb-1.5">{errosViagem[v.id]}</p>
+                              )}
                               {v.status === "pendente" && motoristasSelecionados[v.id] ? (
                                 <button
                                   onClick={() => handleAtribuir(v.id)}
@@ -885,25 +1005,32 @@ export default function PainelPage() {
                   <p className="text-[#CC0000] uppercase tracking-[0.3em] text-xs font-semibold mb-1">Equipe</p>
                   <h1 className="text-3xl font-bold text-[#F0F0F0] uppercase" style={{ fontFamily: "var(--font-oswald)" }}>Gestão de Motoristas</h1>
                 </div>
-                <button
-                  onClick={() => setNovoMotoristaOpen(true)}
-                  className="flex items-center gap-2 bg-[#CC0000] text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-[#E50000] transition-colors"
-                >
-                  <Plus size={16} />
-                  Novo Motorista
-                </button>
+                <div className="flex items-center gap-3">
+                  {motoristas.filter(m => !m.ativo).length > 0 && (
+                    <span className="text-xs text-[#555] tabular-nums">
+                      {motoristas.filter(m => !m.ativo).length} desativado{motoristas.filter(m => !m.ativo).length > 1 ? "s" : ""}
+                    </span>
+                  )}
+                  <button
+                    onClick={() => setNovoMotoristaOpen(true)}
+                    className="flex items-center gap-2 bg-[#CC0000] text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-[#E50000] transition-colors"
+                  >
+                    <Plus size={16} />
+                    Novo Motorista
+                  </button>
+                </div>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-2 gap-3">
-                <div className="bg-[#2B2B2B] border border-[#444] rounded-xl p-4 text-center">
-                  <div className="w-3 h-3 rounded-full mx-auto mb-2 bg-[#22C55E]" />
-                  <p className="text-2xl font-bold text-[#F0F0F0]">{motoristas.filter(m => m.ativo).length}</p>
-                  <p className="text-xs text-[#A0A0A0] mt-0.5">Ativos</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-[#2B2B2B] border border-[#22C55E]/20 rounded-xl p-4 text-center">
+                  <div className="w-3 h-3 rounded-full mx-auto mb-2 bg-[#22C55E] animate-pulse" />
+                  <p className="text-2xl font-bold text-[#22C55E]">{motoristas.filter(m => m.online).length}</p>
+                  <p className="text-xs text-[#A0A0A0] mt-0.5">Online</p>
                 </div>
                 <div className="bg-[#2B2B2B] border border-[#444] rounded-xl p-4 text-center">
-                  <div className="w-3 h-3 rounded-full mx-auto mb-2 bg-[#A0A0A0]" />
-                  <p className="text-2xl font-bold text-[#F0F0F0]">{motoristas.filter(m => !m.ativo).length}</p>
-                  <p className="text-xs text-[#A0A0A0] mt-0.5">Inativos</p>
+                  <div className="w-3 h-3 rounded-full mx-auto mb-2 bg-[#555]" />
+                  <p className="text-2xl font-bold text-[#F0F0F0]">{motoristas.filter(m => !m.online).length}</p>
+                  <p className="text-xs text-[#A0A0A0] mt-0.5">Offline</p>
                 </div>
               </div>
 
@@ -919,25 +1046,54 @@ export default function PainelPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   {motoristas.map((m) => {
                     const iniciais = m.nome.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
+                    const menuAberto = menuMotorista === m.id;
                     return (
-                      <div key={m.id} className="bg-[#2B2B2B] border border-[#444] rounded-xl p-5 shadow-[0_4px_20px_rgba(0,0,0,0.4)]">
+                      <div key={m.id} className={`relative bg-[#2B2B2B] border rounded-xl p-5 shadow-[0_4px_20px_rgba(0,0,0,0.4)] ${m.ativo ? "border-[#444]" : "border-[#333] opacity-60"}`}>
                         <div className="flex items-start justify-between">
                           <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-full bg-[#333] flex items-center justify-center text-[#F0F0F0] font-bold flex-shrink-0">
-                              {iniciais}
+                            <div className="relative w-12 h-12 flex-shrink-0">
+                              <div className="w-12 h-12 rounded-full bg-[#333] flex items-center justify-center text-[#F0F0F0] font-bold">
+                                {iniciais}
+                              </div>
+                              {m.ativo && <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-[#2B2B2B] ${m.online ? "bg-[#22C55E]" : "bg-[#555]"}`} />}
                             </div>
                             <div>
-                              <p className="text-[#F0F0F0] font-semibold">{m.nome}</p>
-                              <p className="text-[#A0A0A0] text-xs mt-0.5">{m.telefone ?? "Sem telefone"}</p>
+                              <div className="flex items-center gap-2">
+                                <p className="text-[#F0F0F0] font-semibold">{m.nome}</p>
+                                {!m.ativo && <span className="text-xs px-2 py-0.5 rounded-full bg-[#333] text-[#A0A0A0]">Inativo</span>}
+                              </div>
+                              <p className={`text-xs mt-0.5 ${m.ativo && m.online ? "text-[#22C55E]" : "text-[#A0A0A0]"}`}>
+                                {m.ativo ? (m.online ? "Online" : "Offline") : "—"} ·{" "}
+                                {m.telefone ? (
+                                  <a href={`https://wa.me/55${m.telefone.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:opacity-70 transition-opacity">
+                                    {formatPhone(m.telefone)}
+                                  </a>
+                                ) : "Sem telefone"}
+                              </p>
                             </div>
                           </div>
-                          <span
-                            className="text-xs px-2.5 py-1 rounded-full font-medium"
-                            style={m.ativo ? { color: "#22C55E", backgroundColor: "rgba(34,197,94,0.1)" } : { color: "#A0A0A0", backgroundColor: "rgba(160,160,160,0.1)" }}
-                          >
-                            {m.ativo ? "Ativo" : "Inativo"}
-                          </span>
+
+                          {/* Menu */}
+                          <div className="relative">
+                            <button
+                              onClick={() => setMenuMotorista(menuAberto ? null : m.id)}
+                              className="text-[#A0A0A0] hover:text-[#F0F0F0] transition-colors p-1 rounded"
+                            >
+                              <ChevronDown size={15} className={`transition-transform ${menuAberto ? "rotate-180" : ""}`} />
+                            </button>
+                            {menuAberto && (
+                              <div className="absolute right-0 top-7 w-44 bg-[#1E1E1E] border border-[#444] rounded-lg shadow-xl z-10 overflow-hidden">
+                                <button
+                                  onClick={() => handleToggleAtivo(m.id, m.ativo)}
+                                  className={`w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-[#2B2B2B] ${m.ativo ? "text-[#EF4444]" : "text-[#22C55E]"}`}
+                                >
+                                  {m.ativo ? "Inativar perfil" : "Reativar perfil"}
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </div>
+
                         <div className="mt-4 pt-4 border-t border-[#333]">
                           <p className="text-[#A0A0A0] text-xs">
                             Cadastrado em {new Date(m.created_at).toLocaleDateString("pt-BR")}
@@ -1048,7 +1204,7 @@ export default function PainelPage() {
             );
           })()}
 
-          {abaAtiva === "buscar" && <BuscarViagem viagens={viagens} motoristas={motoristas} />}
+          {abaAtiva === "buscar" && <BuscarViagem viagens={viagens} motoristas={motoristas} clientes={clientes} />}
 
         </div>
       </main>

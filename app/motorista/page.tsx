@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Logo from "../components/Logo";
 import {
   LayoutDashboard, CalendarDays, Bell, BarChart2, LogOut,
   Car, Clock, MapPin, Navigation, Star, TrendingUp,
-  CheckCircle, XCircle, ChevronRight, Menu, Wifi, WifiOff,
+  CheckCircle, XCircle, ChevronRight, ChevronDown, Menu, Wifi, WifiOff,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { logout } from "@/app/actions/auth";
@@ -86,15 +87,18 @@ const DIAS_SEMANA = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 type Aba = "painel" | "agenda" | "solicitacao" | "metricas";
 
 export default function MotoristaPainelPage() {
+  const router = useRouter();
   const [aba, setAba] = useState<Aba>("painel");
   const [online, setOnline] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [diaSelecionado, setDiaSelecionado] = useState(0);
 
   const [loading, setLoading] = useState(true);
+  const [inativo, setInativo] = useState(false);
   const [nomeMotorista, setNomeMotorista] = useState("");
   const [viagens, setViagens] = useState<ViagemDB[]>([]);
   const [avaliacoes, setAvaliacoes] = useState<AvaliacaoRow[]>([]);
+  const [periodoMetricas, setPeriodoMetricas] = useState<"dia" | "semana" | "mes" | "ano" | "all">("mes");
 
   const semana = semanaAtual();
   const hoje = new Date();
@@ -107,10 +111,18 @@ export default function MotoristaPainelPage() {
     // Perfil do motorista
     const { data: perfil } = await supabase
       .from("perfis")
-      .select("nome")
+      .select("nome, online, ativo")
       .eq("id", user.id)
       .single();
-    setNomeMotorista(perfil?.nome?.split(" ")[0] ?? "Motorista");
+
+    if (!perfil?.ativo) {
+      setInativo(true);
+      setLoading(false);
+      return;
+    }
+
+    setNomeMotorista(perfil.nome?.split(" ")[0] ?? "Motorista");
+    setOnline(perfil.online ?? false);
 
     // Viagens atribuídas a este motorista
     const { data: viagensData } = await supabase
@@ -136,6 +148,15 @@ export default function MotoristaPainelPage() {
 
   useEffect(() => { loadData(); }, []);
 
+  async function handleToggleOnline() {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const novoStatus = !online;
+    setOnline(novoStatus);
+    await supabase.from("perfis").update({ online: novoStatus }).eq("id", user.id);
+  }
+
   async function handleAtualizarStatus(viagemId: string, novoStatus: StatusViagem) {
     const supabase = createClient();
     await supabase.from("viagens").update({ status: novoStatus }).eq("id", viagemId);
@@ -148,10 +169,23 @@ export default function MotoristaPainelPage() {
   const proximas = viagens.filter((v) => ["agendada", "confirmada", "em_rota"].includes(v.status));
   const feitas   = viagens.filter((v) => ["concluida", "cancelada"].includes(v.status));
 
-  const totalConcluidas = viagens.filter((v) => v.status === "concluida").length;
-  const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-  const viagensMes = viagens.filter((v) => v.status === "concluida" && new Date(v.data_hora) >= inicioMes);
-  const faturamentoMes = viagensMes.reduce((acc, v) => acc + (v.valor ?? 0), 0);
+
+
+  const inicioPeriodo: Record<typeof periodoMetricas, Date | null> = {
+    dia:    new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()),
+    semana: (() => { const d = new Date(hoje); d.setDate(hoje.getDate() - hoje.getDay()); d.setHours(0,0,0,0); return d; })(),
+    mes:    new Date(hoje.getFullYear(), hoje.getMonth(), 1),
+    ano:    new Date(hoje.getFullYear(), 0, 1),
+    all:    null,
+  };
+  const labelPeriodo: Record<typeof periodoMetricas, string> = {
+    dia: "hoje", semana: "esta semana", mes: "este mês", ano: "este ano", all: "desde o início",
+  };
+  const corte = inicioPeriodo[periodoMetricas];
+  const viagensPeriodo = viagens.filter((v) =>
+    v.status === "concluida" && (corte === null || new Date(v.data_hora) >= corte)
+  );
+  const faturamentoPeriodo = viagensPeriodo.reduce((acc, v) => acc + (v.valor ?? 0), 0);
   const avaliacaoMedia = avaliacoes.length
     ? avaliacoes.reduce((acc, a) => acc + a.nota, 0) / avaliacoes.length
     : null;
@@ -162,6 +196,35 @@ export default function MotoristaPainelPage() {
     { id: "solicitacao", label: "Solicitações", icon: Bell, badge: pendentes.length || undefined },
     { id: "metricas",    label: "Métricas",     icon: BarChart2 },
   ];
+
+  if (inativo) {
+    return (
+      <div className="min-h-screen bg-[#1E1E1E] flex flex-col items-center justify-center px-4 text-center">
+        <div className="w-16 h-16 rounded-full bg-[#EF4444]/10 border border-[#EF4444]/30 flex items-center justify-center mb-6">
+          <XCircle size={32} className="text-[#EF4444]" />
+        </div>
+        <h1 className="text-2xl font-bold text-[#F0F0F0] mb-2" style={{ fontFamily: "var(--font-oswald)" }}>
+          ACESSO SUSPENSO
+        </h1>
+        <p className="text-[#A0A0A0] text-sm max-w-sm mb-8">
+          Seu perfil foi desativado pelo administrador. Entre em contato para mais informações.
+        </p>
+        <a
+          href="https://wa.me/5519997590929"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 bg-[#22C55E] text-white px-6 py-3 rounded-lg font-semibold hover:bg-[#16A34A] transition-colors text-sm"
+        >
+          Falar com o administrador
+        </a>
+        <form action={logout} className="mt-4">
+          <button type="submit" className="text-xs text-[#A0A0A0] hover:text-[#F0F0F0] transition-colors">
+            Sair da conta
+          </button>
+        </form>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#1E1E1E] flex">
@@ -180,7 +243,7 @@ export default function MotoristaPainelPage() {
 
         <div className="px-4 py-3 border-b border-[#333]">
           <button
-            onClick={() => setOnline(!online)}
+            onClick={handleToggleOnline}
             className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm transition-colors ${online ? "bg-[#22C55E]/10 border border-[#22C55E]/30" : "bg-[#333] border border-[#444]"}`}
           >
             <span className="flex items-center gap-2">
@@ -547,8 +610,9 @@ export default function MotoristaPainelPage() {
                             <p className="text-[#A0A0A0] text-xs">{formatHora(v.data_hora)} — {formatValor(v.valor)}</p>
                           </div>
                         </div>
-                        <div className="space-y-2">
+                        <div className="space-y-1">
                           <div className="flex items-center gap-2 text-[#A0A0A0] text-sm"><Navigation size={14} /><span>{v.origem}</span></div>
+                          <div className="pl-[3px]"><ChevronDown size={12} className="text-[#555]" /></div>
                           <div className="flex items-center gap-2 text-[#F0F0F0] text-sm"><MapPin size={14} className="text-[#CC0000]" /><span>{v.destino}</span></div>
                         </div>
                         <div className="flex gap-3">
@@ -576,32 +640,60 @@ export default function MotoristaPainelPage() {
           {/* ── Métricas ── */}
           {aba === "metricas" && (
             <div className="space-y-6">
-              <div>
-                <p className="text-[#CC0000] uppercase tracking-[0.3em] text-xs font-semibold mb-1">Desempenho</p>
-                <h1 className="text-3xl font-bold text-[#F0F0F0] uppercase" style={{ fontFamily: "var(--font-oswald)" }}>Métricas</h1>
+              <div className="flex items-end justify-between gap-4">
+                <div>
+                  <p className="text-[#CC0000] uppercase tracking-[0.3em] text-xs font-semibold mb-1">Desempenho</p>
+                  <h1 className="text-3xl font-bold text-[#F0F0F0] uppercase" style={{ fontFamily: "var(--font-oswald)" }}>Métricas</h1>
+                </div>
+                <select
+                  value={periodoMetricas}
+                  onChange={(e) => setPeriodoMetricas(e.target.value as typeof periodoMetricas)}
+                  className="bg-[#2B2B2B] border border-[#444] text-[#A0A0A0] text-xs rounded px-2 py-1.5 focus:outline-none focus:border-[#CC0000] mb-1"
+                >
+                  <option value="dia">Hoje</option>
+                  <option value="semana">Esta semana</option>
+                  <option value="mes">Este mês</option>
+                  <option value="ano">Este ano</option>
+                  <option value="all">Desde sempre</option>
+                </select>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                {[
-                  { label: "Avaliação média",  valor: avaliacaoMedia !== null ? avaliacaoMedia.toFixed(1) : "—", sub: "por clientes",      icon: Star,        cor: "#F59E0B" },
-                  { label: "Viagens no mês",   valor: viagensMes.length.toString(),                               sub: new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" }), icon: Car, cor: "#CC0000" },
-                  { label: "Total de viagens", valor: totalConcluidas.toString(),                                  sub: "desde o início",    icon: TrendingUp,  cor: "#3B82F6" },
-                  { label: "Faturamento",      valor: faturamentoMes.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }), sub: "este mês", icon: TrendingUp, cor: "#22C55E" },
-                ].map((m) => {
-                  const Icon = m.icon;
-                  return (
-                    <div key={m.label} className="bg-[#2B2B2B] border border-[#444] rounded-xl p-5 shadow-[0_4px_20px_rgba(0,0,0,0.4)]">
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-[#A0A0A0] text-xs">{m.label}</span>
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: m.cor + "22" }}>
-                          <Icon size={15} style={{ color: m.cor }} />
-                        </div>
-                      </div>
-                      <p className="text-2xl font-bold text-[#F0F0F0]">{loading ? "—" : m.valor}</p>
-                      <p className="text-xs text-[#A0A0A0] mt-1">{m.sub}</p>
+                {/* Card: Avaliação média */}
+                <div className="bg-[#2B2B2B] border border-[#444] rounded-xl p-5 shadow-[0_4px_20px_rgba(0,0,0,0.4)]">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-[#A0A0A0] text-xs">Avaliação média</span>
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#F59E0B22]">
+                      <Star size={15} className="text-[#F59E0B]" />
                     </div>
-                  );
-                })}
+                  </div>
+                  <p className="text-2xl font-bold text-[#F0F0F0]">{loading ? "—" : (avaliacaoMedia !== null ? avaliacaoMedia.toFixed(1) : "—")}</p>
+                  <p className="text-xs text-[#A0A0A0] mt-1">por clientes</p>
+                </div>
+
+                {/* Card: Viagens concluídas */}
+                <div className="bg-[#2B2B2B] border border-[#444] rounded-xl p-5 shadow-[0_4px_20px_rgba(0,0,0,0.4)]">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-[#A0A0A0] text-xs">Viagens concluídas</span>
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#CC000022]">
+                      <Car size={15} className="text-[#CC0000]" />
+                    </div>
+                  </div>
+                  <p className="text-2xl font-bold text-[#F0F0F0]">{loading ? "—" : viagensPeriodo.length}</p>
+                  <p className="text-xs text-[#A0A0A0] mt-1">{labelPeriodo[periodoMetricas]}</p>
+                </div>
+
+                {/* Card: Faturamento */}
+                <div className="bg-[#2B2B2B] border border-[#444] rounded-xl p-5 shadow-[0_4px_20px_rgba(0,0,0,0.4)]">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-[#A0A0A0] text-xs">Faturamento</span>
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#22C55E22]">
+                      <TrendingUp size={15} className="text-[#22C55E]" />
+                    </div>
+                  </div>
+                  <p className="text-2xl font-bold text-[#F0F0F0]">{loading ? "—" : faturamentoPeriodo.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</p>
+                  <p className="text-xs text-[#A0A0A0] mt-1">{labelPeriodo[periodoMetricas]}</p>
+                </div>
               </div>
 
               {/* Avaliações recentes */}

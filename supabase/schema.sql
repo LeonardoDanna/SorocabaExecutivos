@@ -15,8 +15,12 @@ CREATE TABLE public.perfis (
   telefone    TEXT,
   perfil      TEXT NOT NULL DEFAULT 'cliente' CHECK (perfil IN ('cliente', 'motorista', 'admin')),
   ativo       BOOLEAN NOT NULL DEFAULT true,
+  online      BOOLEAN NOT NULL DEFAULT false,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Migration para bancos existentes:
+-- ALTER TABLE public.perfis ADD COLUMN IF NOT EXISTS online BOOLEAN NOT NULL DEFAULT false;
 
 -- RLS
 ALTER TABLE public.perfis ENABLE ROW LEVEL SECURITY;
@@ -53,33 +57,6 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
-
--- ============================================================
--- DESTINOS PRÉ-DEFINIDOS
--- ============================================================
-CREATE TABLE public.destinos (
-  id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  nome       TEXT NOT NULL,
-  endereco   TEXT NOT NULL,
-  tipo       TEXT NOT NULL CHECK (tipo IN ('aeroporto', 'hotel', 'corporativo', 'outro')),
-  ativo      BOOLEAN NOT NULL DEFAULT true,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-ALTER TABLE public.destinos ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Destinos são públicos para leitura"
-  ON public.destinos FOR SELECT
-  USING (true);
-
--- Dados iniciais
-INSERT INTO public.destinos (nome, endereco, tipo) VALUES
-  ('Aeroporto de Guarulhos (GRU)', 'Rod. Hélio Smidt, s/n - Guarulhos, SP', 'aeroporto'),
-  ('Aeroporto de Congonhas (CGH)', 'Av. Washington Luís, s/n - São Paulo, SP', 'aeroporto'),
-  ('Aeroporto de Viracopos (VCP)', 'Rod. Santos Dumont, km 66 - Campinas, SP', 'aeroporto'),
-  ('Rodoviária de Sorocaba', 'Av. Itavuvu, 1650 - Sorocaba, SP', 'outro'),
-  ('Shopping Iguatemi Sorocaba', 'Av. Itavuvu, 11443 - Sorocaba, SP', 'outro'),
-  ('Hospital Santa Lucinda', 'R. Dr. Pereira Barreto, 130 - Sorocaba, SP', 'outro');
 
 -- ============================================================
 -- VIAGENS
