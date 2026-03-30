@@ -31,7 +31,6 @@ export default function Footer() {
           <ul className="space-y-2 text-brand-muted text-sm">
             <li><a href="#sobre" className="hover:text-brand-text transition-colors">Sobre nós</a></li>
             <li><a href="#servicos" className="hover:text-brand-text transition-colors">Serviços</a></li>
-            <li><a href="#precos" className="hover:text-brand-text transition-colors">Tabela de preços</a></li>
             <li><a href="/login" className="hover:text-brand-text transition-colors">Acessar plataforma</a></li>
           </ul>
         </div>
@@ -42,7 +41,7 @@ export default function Footer() {
         <span className="block mt-1 text-[#555555]">
           Desenvolvido por{" "}
           <a
-            href="https://www.linkedin.com/in/leonardo-danna/"
+            href="https://github.com/LeonardoDanna"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-brand-muted transition-colors"
