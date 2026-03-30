@@ -2,7 +2,7 @@
 
 import Navbar from "../components/Navbar";
 import LangDropdown from "../components/LangDropdown";
-import { MapPin, Navigation, Calendar, Clock, ArrowRight, Plus, X } from "lucide-react";
+import { MapPin, Navigation, Calendar, Clock, ArrowRight, Plus, X, MessageSquare } from "lucide-react";
 import { useState, useTransition, useEffect, Suspense } from "react";
 import { useLang, type Lang } from "../hooks/useLang";
 import { useSearchParams } from "next/navigation";
@@ -22,6 +22,8 @@ const t = {
     adicionar_parada: "Adicionar parada",
     data: "Data",
     horario: "Horário",
+    observacoes: "Adicionar observação",
+    placeholder_observacoes: "Ex: Embarque no portal A, precisa de ajuda com bagagem...",
     enviando: "Enviando...",
     solicitar: "Solicitar corrida",
   },
@@ -38,6 +40,8 @@ const t = {
     adicionar_parada: "Add stop",
     data: "Date",
     horario: "Time",
+    observacoes: "Add a note",
+    placeholder_observacoes: "E.g.: Pickup at terminal A, need help with luggage...",
     enviando: "Sending...",
     solicitar: "Request ride",
   },
@@ -54,6 +58,8 @@ const t = {
     adicionar_parada: "Agregar parada",
     data: "Fecha",
     horario: "Horario",
+    observacoes: "Agregar observación",
+    placeholder_observacoes: "Ej: Embarque en portal A, necesita ayuda con equipaje...",
     enviando: "Enviando...",
     solicitar: "Solicitar servicio",
   },
@@ -81,6 +87,7 @@ function SolicitarForm({ lang }: { lang: Lang }) {
   const [minuto, setMinuto] = useState(mDefault);
   const [erro, setErro] = useState("");
   const [isPending, startTransition] = useTransition();
+  const [showObservacoes, setShowObservacoes] = useState(false);
 
   useEffect(() => {
     const o = params.get("origem");
@@ -228,6 +235,28 @@ function SolicitarForm({ lang }: { lang: Lang }) {
             </div>
           </div>
         </div>
+
+        {!showObservacoes ? (
+          <button
+            type="button"
+            onClick={() => setShowObservacoes(true)}
+            className="flex items-center gap-1.5 text-sm text-[#CC0000] hover:text-[#E50000] transition-colors"
+          >
+            <MessageSquare size={15} />
+            {l.observacoes}
+          </button>
+        ) : (
+          <div className="relative">
+            <textarea
+              name="observacoes"
+              placeholder={l.placeholder_observacoes}
+              maxLength={500}
+              rows={3}
+              autoFocus
+              className="w-full bg-[#2B2B2B] border border-[#444444] text-[#F0F0F0] placeholder-[#A0A0A0] rounded px-4 py-3 focus:outline-none focus:border-[#CC0000] transition-colors resize-none text-sm"
+            />
+          </div>
+        )}
 
         {erro && (
           <p className="text-[#EF4444] text-sm bg-[#EF4444]/10 border border-[#EF4444]/30 rounded px-4 py-2">

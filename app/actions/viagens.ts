@@ -14,6 +14,7 @@ export async function solicitarCorrida(formData: FormData) {
   const destino = formData.get("destino") as string;
   const data = formData.get("data") as string;
   const hora = formData.get("hora") as string;
+  const observacoes = (formData.get("observacoes") as string | null)?.trim() || null;
   const paradasRaw = formData.get("paradas") as string | null;
   let paradas: string[] = [];
   if (paradasRaw) {
@@ -34,6 +35,9 @@ export async function solicitarCorrida(formData: FormData) {
   if (origem.length > 300 || destino.length > 300)
     return { erro: "Endereço muito longo." };
 
+  if (observacoes && observacoes.length > 500)
+    return { erro: "Observações muito longas." };
+
   const data_hora = new Date(`${data}T${hora}:00`).toISOString();
 
   if (new Date(data_hora) < new Date()) {
@@ -47,6 +51,7 @@ export async function solicitarCorrida(formData: FormData) {
     paradas,
     data_hora,
     status: "pendente",
+    observacoes,
   });
 
   if (error) {
