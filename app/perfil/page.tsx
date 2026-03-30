@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useLang, type Lang } from "../hooks/useLang";
+import LangDropdown from "../components/LangDropdown";
 import Navbar from "../components/Navbar";
 import {
   User, Mail, Phone, Shield, Edit2, Check, X,
@@ -92,6 +93,47 @@ const t = {
     erroSenhaCoincidem: "Passwords don't match.",
     erroSenhaUpdate: "Error updating password. Please try again.",
     locale: "en-US",
+  },
+  es: {
+    loading: "Cargando perfil...",
+    tag: "Mi cuenta", title: "Perfil",
+    roles: { admin: "Administrador", motorista: "Conductor", cliente: "Cliente" },
+    membroDesde: "Miembro desde",
+    viagens: "Viajes",
+    toastPerfil: "Perfil actualizado con éxito.",
+    toastCancel: "Viaje cancelado con éxito.",
+    dadosPessoais: "Datos personales",
+    editar: "Editar", cancelar: "Cancelar", salvando: "Guardando...", salvar: "Guardar",
+    nomeLabel: "Nombre completo", emailLabel: "Correo electrónico",
+    naoEditavel: "no editable",
+    telefoneLabel: "Teléfono (WhatsApp)", telefoneHint: "Usado para notificaciones de viaje por WhatsApp.",
+    naoInformado: "No informado",
+    erroSalvar: "Error al guardar. Inténtelo de nuevo.",
+    proximasViagens: "Próximos viajes",
+    nenhumaProxima: "Ningún viaje programado",
+    nenhumaProximaSub: "Solicite un servicio para comenzar.",
+    solicitarCorrida: "Solicitar servicio",
+    statusLabel: { pendente: "Pendiente", agendada: "Esperando aceptación", confirmada: "Confirmado", em_rota: "En ruta" },
+    confirmarCancelamento: "¿Confirmar cancelación?",
+    cancelando: "Cancelando...", simCancelar: "Sí, cancelar", nao: "No",
+    cancelarViagem: "Cancelar viaje",
+    viagensAnteriores: "Viajes anteriores",
+    nenhumaAnterior: "Ningún viaje realizado aún",
+    nenhumaAnteriorSub: "Su historial aparecerá aquí después del primer viaje.",
+    statusAnterior: { concluida: "Completado", cancelada: "Cancelado" },
+    salvandoAv: "Guardando...", suaAvaliacao: "Su calificación:", avaliar: "Calificar:",
+    repetir: "Repetir este viaje",
+    seguranca: "Seguridad",
+    senhaAtualizada: "Contraseña actualizada con éxito.",
+    senhaTitle: "Contraseña", senhaDesc: "Cambie su contraseña de acceso",
+    alterarSenha: "Cambiar contraseña",
+    novaSenha: "Nueva contraseña", novaSenhaPlaceholder: "Mínimo 6 caracteres",
+    confirmarSenha: "Confirmar nueva contraseña", confirmarSenhaPlaceholder: "Repita la contraseña",
+    salvarSenha: "Guardar nueva contraseña",
+    erroSenhaMin: "La contraseña debe tener al menos 6 caracteres.",
+    erroSenhaCoincidem: "Las contraseñas no coinciden.",
+    erroSenhaUpdate: "Error al actualizar contraseña. Inténtelo de nuevo.",
+    locale: "es-ES",
   },
 };
 
@@ -249,21 +291,7 @@ export default function PerfilPage() {
     cancelada:  "text-[#EF4444] bg-[#EF4444]/10 border-[#EF4444]/30",
   };
 
-  const LangToggle = () => (
-    <div className="flex items-center gap-1 bg-[#2B2B2B] border border-[#444444] rounded p-1">
-      {(["pt", "en"] as Lang[]).map((l) => (
-        <button
-          key={l}
-          onClick={() => setLang(l)}
-          className={`px-3 py-1 rounded text-xs font-semibold transition-colors ${
-            lang === l ? "bg-[#CC0000] text-white" : "text-[#A0A0A0] hover:text-[#F0F0F0]"
-          }`}
-        >
-          {l.toUpperCase()}
-        </button>
-      ))}
-    </div>
-  );
+  const LangToggle = () => <LangDropdown lang={lang} setLang={setLang} />;
 
   if (loading) {
     return (

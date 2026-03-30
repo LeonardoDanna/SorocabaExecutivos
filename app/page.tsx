@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useLang } from "./hooks/useLang";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+import LangDropdown from "./components/LangDropdown";
 import {
   Car,
   Shield,
@@ -214,13 +215,110 @@ const content = {
       btn: "Create my account",
     },
   },
+
+  es: {
+    hero: {
+      tag: "Transporte Ejecutivo Premium",
+      title: "Transporte",
+      highlight: "Ejecutivo",
+      sub: "Seguridad, confort y puntualidad en cada viaje.",
+      cta: "Solicitar un servicio",
+    },
+    sobre: {
+      tag: "Quiénes somos",
+      title: "Una historia de",
+      highlight: "confianza",
+      text: "Sorocaba Executivos nació de la dedicación de Vagner, quien comenzó como conductor de aplicación en 2017 y se ganó la confianza de los pasajeros por su manejo cuidadoso y compromiso. Hoy contamos con una red de conductores experimentados y una flota orientada al confort, creada para atender exclusivamente la región de Sorocaba con agilidad, comodidad y seguridad.",
+    },
+    diferenciais: {
+      tag: "Diferenciales",
+      title: "¿Por qué",
+      highlight: "elegirnos?",
+      items: [
+        {
+          title: "Vehículos nuevos y revisados",
+          text: "Flota bien equipada, higienizada y en plenas condiciones de uso. Sedán y Van Ejecutiva con aire acondicionado.",
+        },
+        {
+          title: "Conductores habilitados y capacitados",
+          text: "Profesionales comprometidos con su seguridad, cordialidad, eficiencia y discreción en cada trayecto.",
+        },
+        {
+          title: "Tecnología de última generación",
+          text: "Equipos de punta para brindar aún más seguridad y control durante todo el viaje.",
+        },
+        {
+          title: "Atención rápida",
+          text: "Nuestro equipo está listo para atender su demanda con agilidad y resolver cualquier situación.",
+        },
+        {
+          title: "Atendemos con todos los vehículos",
+          text: "Autos, vans, microbuses, autobuses ejecutivos, aviones pequeños y helicópteros para cada necesidad.",
+        },
+      ],
+    },
+    servicos: {
+      tag: "Lo que hacemos",
+      title: "Nuestros",
+      highlight: "servicios",
+      items: [
+        "Transfer GRU, CGH y VCP",
+        "Eventos corporativos y congresos",
+        "Taxi ejecutivo en Sorocaba",
+        "Traslado a hoteles, spas y resorts",
+        "Transporte de VIPs y conferencistas",
+        "Transfer en todo el territorio nacional",
+      ],
+    },
+    frota: {
+      tag: "Nuestra Flota",
+      title: "Vehículos para",
+      highlight: "cada necesidad",
+      sub: "Una gama completa de vehículos para satisfacer todas sus demandas, desde transfers individuales hasta grupos y viajes de larga distancia.",
+      items: [
+        { title: "Autos Ejecutivos", desc: "Sedanes de lujo con conductores para transfers y viajes ejecutivos." },
+        { title: "Vans Ejecutivas", desc: "Confort y espacio para grupos, con Wi-Fi y aire acondicionado." },
+        { title: "Microbús", desc: "Transporte para grupos medianos, ideal para eventos corporativos." },
+        { title: "Autobús Ejecutivo", desc: "Viajes en grupo con máximo confort, asientos reclinables y entretenimiento." },
+        { title: "Taxi Aéreo — Aviones", desc: "Vuelos rápidos y seguros a destinos nacionales con nuestra flota de jets." },
+        { title: "Taxi Aéreo — Helicóptero", desc: "Agilidad urbana y transfers rápidos entre aeropuertos y puntos estratégicos." },
+      ],
+    },
+    como: {
+      tag: "Simple y rápido",
+      title: "Cómo",
+      highlight: "funciona",
+      passos: [
+        {
+          num: "01",
+          title: "Cree su cuenta",
+          text: "Registro rápido con nombre, correo y teléfono. Listo para solicitar su primer servicio.",
+        },
+        {
+          num: "02",
+          title: "Solicite su servicio",
+          text: "Ingrese origen, destino y horario. Elija entre destinos frecuentes o ingrese una nueva dirección.",
+        },
+        {
+          num: "03",
+          title: "Siga en tiempo real",
+          text: "Reciba confirmación por WhatsApp y siga al conductor hasta su llegada.",
+        },
+      ],
+    },
+    cta: {
+      title: "¿Listo para viajar con confort?",
+      sub: "Regístrese y solicite su servicio ahora.",
+      btn: "Crear mi cuenta",
+    },
+  },
 };
 
 
 const servicoIcons = [Plane, Building2, Car, MapPin, Star, Globe];
 const diferencialIcons = [Car, Shield, Zap, Headphones, Bus];
 const frotaPhotos = [
-  "/toyota-corolla-hibrido-6-1.png",
+  "/2025-09-2-1024x512.jpg",
   "/Mercedes-Benz-Sprinter-de-luxo-1.png",
   "/Gemini_Generated_Image_6x09fa6x09fa6x09.png",
   "/onibus-46lugares-Irizar-i6-Efficient-768x512.png",
@@ -245,44 +343,25 @@ export default function Home() {
       <Navbar lang={lang} />
 
       {/* HERO */}
-      <section className="relative min-h-screen flex items-center pt-20 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#1E1E1E] via-[#2B2B2B] to-[#1E1E1E]" />
-        <div className="absolute top-0 right-0 w-1/2 h-full bg-[#CC0000]/5 blur-3xl" />
-        {/* Watermark logo */}
+      <section className="relative min-h-screen flex items-center overflow-hidden">
+        {/* Foto de fundo */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/logo.png"
+          src="/toyota-corolla-hibrido-6-1.png"
           alt=""
           aria-hidden="true"
-          className="absolute top-1/2 left-[62%] -translate-x-1/2 -translate-y-1/2 w-[750px] pointer-events-none select-none"
-          style={{ opacity: 0.05, mixBlendMode: "screen" }}
+          className="absolute inset-0 w-full h-full object-cover object-center"
         />
+        {/* Overlays */}
+        <div className="absolute inset-0 bg-[#0A0A0A]/70" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#0A0A0A]/80 via-[#0A0A0A]/40 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A]/60 via-transparent to-transparent" />
 
-        {/* Toggle PT / EN */}
-        <div className="absolute top-24 right-6 z-10 flex items-center gap-1 bg-[#2B2B2B] border border-[#444444] rounded p-1">
-          <button
-            onClick={() => setLang("pt")}
-            className={`px-3 py-1 rounded text-xs font-semibold transition-colors ${
-              lang === "pt"
-                ? "bg-[#CC0000] text-white"
-                : "text-[#A0A0A0] hover:text-[#F0F0F0]"
-            }`}
-          >
-            PT
-          </button>
-          <button
-            onClick={() => setLang("en")}
-            className={`px-3 py-1 rounded text-xs font-semibold transition-colors ${
-              lang === "en"
-                ? "bg-[#CC0000] text-white"
-                : "text-[#A0A0A0] hover:text-[#F0F0F0]"
-            }`}
-          >
-            EN
-          </button>
+        <div className="absolute top-24 right-6 z-10">
+          <LangDropdown lang={lang} setLang={setLang} />
         </div>
 
-        <div className="relative max-w-7xl mx-auto px-6">
+        <div className="relative max-w-7xl mx-auto px-6 pt-20">
           <div className="max-w-2xl">
             <p className="text-[#CC0000] uppercase tracking-[0.3em] text-sm font-semibold mb-4">
               {t.hero.tag}
@@ -291,46 +370,28 @@ export default function Home() {
               className="text-5xl md:text-7xl font-bold leading-tight mb-6 uppercase text-[#F0F0F0]"
               style={{ fontFamily: "var(--font-oswald)" }}
             >
-              {t.hero.title} <span className="text-[#CC0000]">{t.hero.highlight}</span>
+              {t.hero.title}<br /><span className="text-[#CC0000]">{t.hero.highlight}</span>
             </h1>
-            <p className="text-[#A0A0A0] text-xl mb-10 leading-relaxed">{t.hero.sub}</p>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Link
-                href="/cadastro"
-                className="bg-[#CC0000] text-white px-8 py-4 rounded text-center font-semibold hover:bg-[#E50000] transition-colors text-lg"
-              >
-                {t.hero.cta}
-              </Link>
-            </div>
+            <p className="text-[#C0C0C0] text-xl mb-10 leading-relaxed">{t.hero.sub}</p>
+            <Link
+              href="/cadastro"
+              className="inline-block bg-[#CC0000] text-white px-8 py-4 rounded font-semibold hover:bg-[#E50000] transition-colors text-lg"
+            >
+              {t.hero.cta}
+            </Link>
           </div>
         </div>
       </section>
 
-      {/* SOBRE */}
-      <section id="sobre" className="py-24 bg-[#2B2B2B]">
-        <div className="max-w-3xl mx-auto px-6 text-center">
-          <p className="text-[#CC0000] uppercase tracking-[0.3em] text-sm font-semibold mb-4">
-            {t.sobre.tag}
-          </p>
-          <h2
-            className="text-4xl font-bold mb-6 uppercase text-[#F0F0F0]"
-            style={{ fontFamily: "var(--font-oswald)" }}
-          >
-            {t.sobre.title} <span className="text-[#CC0000]">{t.sobre.highlight}</span>
-          </h2>
-          <p className="text-[#A0A0A0] leading-relaxed text-lg">{t.sobre.text}</p>
-        </div>
-      </section>
-
       {/* DIFERENCIAIS */}
-      <section className="py-24 bg-[#1E1E1E]">
+      <section className="py-24 bg-[#DEDEDE]">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
             <p className="text-[#CC0000] uppercase tracking-[0.3em] text-sm font-semibold mb-4">
               {t.diferenciais.tag}
             </p>
             <h2
-              className="text-4xl font-bold uppercase text-[#F0F0F0]"
+              className="text-4xl font-bold uppercase text-[#1A1A1A]"
               style={{ fontFamily: "var(--font-oswald)" }}
             >
               {t.diferenciais.title} <span className="text-[#CC0000]">{t.diferenciais.highlight}</span>
@@ -340,13 +401,10 @@ export default function Home() {
             {t.diferenciais.items.slice(0, 3).map((d, i) => {
               const Icon = diferencialIcons[i];
               return (
-                <div
-                  key={d.title}
-                  className="bg-[#2B2B2B] border border-[#444444] rounded-lg p-6 hover:border-[#CC0000] transition-colors group"
-                >
+                <div key={d.title} className="bg-[#F0F0F0] border border-[#CCCCCC] rounded-lg p-6 hover:border-[#CC0000] transition-colors group shadow-sm">
                   <Icon size={32} className="text-[#CC0000] mb-4 group-hover:scale-110 transition-transform" />
-                  <h3 className="text-[#F0F0F0] font-semibold mb-2">{d.title}</h3>
-                  <p className="text-[#A0A0A0] text-sm leading-relaxed">{d.text}</p>
+                  <h3 className="text-[#1A1A1A] font-semibold mb-2">{d.title}</h3>
+                  <p className="text-[#666666] text-sm leading-relaxed">{d.text}</p>
                 </div>
               );
             })}
@@ -355,13 +413,10 @@ export default function Home() {
             {t.diferenciais.items.slice(3).map((d, i) => {
               const Icon = diferencialIcons[3 + i];
               return (
-                <div
-                  key={d.title}
-                  className="bg-[#2B2B2B] border border-[#444444] rounded-lg p-6 hover:border-[#CC0000] transition-colors group"
-                >
+                <div key={d.title} className="bg-[#F0F0F0] border border-[#CCCCCC] rounded-lg p-6 hover:border-[#CC0000] transition-colors group shadow-sm">
                   <Icon size={32} className="text-[#CC0000] mb-4 group-hover:scale-110 transition-transform" />
-                  <h3 className="text-[#F0F0F0] font-semibold mb-2">{d.title}</h3>
-                  <p className="text-[#A0A0A0] text-sm leading-relaxed">{d.text}</p>
+                  <h3 className="text-[#1A1A1A] font-semibold mb-2">{d.title}</h3>
+                  <p className="text-[#666666] text-sm leading-relaxed">{d.text}</p>
                 </div>
               );
             })}
@@ -370,14 +425,14 @@ export default function Home() {
       </section>
 
       {/* SERVIÇOS */}
-      <section id="servicos" className="py-24 bg-[#2B2B2B]">
+      <section id="servicos" className="py-24 bg-[#E8E8E8]">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
             <p className="text-[#CC0000] uppercase tracking-[0.3em] text-sm font-semibold mb-4">
               {t.servicos.tag}
             </p>
             <h2
-              className="text-4xl font-bold uppercase text-[#F0F0F0]"
+              className="text-4xl font-bold uppercase text-[#1A1A1A]"
               style={{ fontFamily: "var(--font-oswald)" }}
             >
               {t.servicos.title} <span className="text-[#CC0000]">{t.servicos.highlight}</span>
@@ -387,12 +442,9 @@ export default function Home() {
             {t.servicos.items.map((label, i) => {
               const Icon = servicoIcons[i];
               return (
-                <div
-                  key={label}
-                  className="flex items-center gap-4 bg-[#333333] border border-[#444444] rounded-lg p-5 hover:border-[#CC0000] transition-colors"
-                >
+                <div key={label} className="flex items-center gap-4 bg-[#F0F0F0] border border-[#CCCCCC] rounded-lg p-5 hover:border-[#CC0000] transition-colors shadow-sm">
                   <Icon size={24} className="text-[#CC0000] shrink-0" />
-                  <span className="text-[#F0F0F0]">{label}</span>
+                  <span className="text-[#1A1A1A]">{label}</span>
                 </div>
               );
             })}
@@ -400,30 +452,43 @@ export default function Home() {
         </div>
       </section>
 
-
       {/* FROTA */}
-      <section id="frota" className="py-24 bg-[#1E1E1E]">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-4">
-            <p className="text-[#CC0000] uppercase tracking-[0.3em] text-sm font-semibold mb-4">
-              {t.frota.tag}
-            </p>
-            <h2
-              className="text-4xl font-bold uppercase text-[#F0F0F0]"
-              style={{ fontFamily: "var(--font-oswald)" }}
-            >
-              {t.frota.title} <span className="text-[#CC0000]">{t.frota.highlight}</span>
-            </h2>
-            <p className="text-[#A0A0A0] mt-4 max-w-2xl mx-auto">{t.frota.sub}</p>
+      <section id="frota" className="bg-[#1A1A1A]">
+        {/* Banner de destaque */}
+        <div className="relative h-[460px] overflow-hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/toyota-corolla-hibrido-6-1.png"
+            alt="Frota Sorocaba Executivos"
+            className="w-full h-full object-cover object-center"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#1A1A1A] via-[#1A1A1A]/55 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#1A1A1A] via-transparent to-transparent" />
+
+          {/* Conteúdo sobreposto */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center gap-5 px-6">
+            <div className="max-w-2xl">
+              <p className="text-[#CC0000] uppercase tracking-[0.3em] text-xs font-semibold mb-3">{t.frota.tag}</p>
+              <h2
+                className="text-4xl md:text-5xl font-bold uppercase text-[#F0F0F0] leading-tight mb-3"
+                style={{ fontFamily: "var(--font-oswald)" }}
+              >
+                {t.frota.title}<br /><span className="text-[#CC0000]">{t.frota.highlight}</span>
+              </h2>
+              <p className="text-[#A0A0A0] text-sm leading-relaxed">{t.frota.sub}</p>
+            </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-12">
+        </div>
+
+        {/* Grid de veículos */}
+        <div className="max-w-7xl mx-auto px-6 py-14">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {t.frota.items.map((v, i) => (
               <div
                 key={v.title}
-                className="group bg-[#2B2B2B] border border-[#444444] rounded-xl overflow-hidden hover:border-[#CC0000] transition-colors"
+                className="group bg-[#222222] border border-[#333333] rounded-xl overflow-hidden hover:border-[#CC0000] transition-colors"
               >
-                {/* Photo */}
-                <div className="relative h-56 overflow-hidden">
+                <div className="relative h-48 overflow-hidden">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={frotaPhotos[i]}
@@ -431,17 +496,16 @@ export default function Home() {
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     style={{ objectPosition: frotaPositions[i] }}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#2B2B2B] via-transparent to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#222222] via-transparent to-transparent" />
                 </div>
-                {/* Info */}
-                <div className="p-6">
+                <div className="px-5 py-4 border-t border-[#2E2E2E]">
                   <h3
-                    className="text-xl font-bold text-[#F0F0F0] uppercase mb-2"
+                    className="text-base font-bold text-[#F0F0F0] uppercase mb-1"
                     style={{ fontFamily: "var(--font-oswald)" }}
                   >
                     {v.title}
                   </h3>
-                  <p className="text-[#A0A0A0] text-sm leading-relaxed">{v.desc}</p>
+                  <p className="text-[#777777] text-xs leading-relaxed">{v.desc}</p>
                 </div>
               </div>
             ))}
@@ -450,14 +514,14 @@ export default function Home() {
       </section>
 
       {/* COMO FUNCIONA */}
-      <section id="como-funciona" className="py-24 bg-[#2B2B2B]">
+      <section id="como-funciona" className="py-24 bg-[#DEDEDE]">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
             <p className="text-[#CC0000] uppercase tracking-[0.3em] text-sm font-semibold mb-4">
               {t.como.tag}
             </p>
             <h2
-              className="text-4xl font-bold uppercase text-[#F0F0F0]"
+              className="text-4xl font-bold uppercase text-[#1A1A1A]"
               style={{ fontFamily: "var(--font-oswald)" }}
             >
               {t.como.title} <span className="text-[#CC0000]">{t.como.highlight}</span>
@@ -466,22 +530,32 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {t.como.passos.map((p) => (
               <div key={p.num} className="text-center">
-                <div
-                  className="text-7xl font-bold text-white/10 mb-4"
-                  style={{ fontFamily: "var(--font-oswald)" }}
-                >
+                <div className="text-7xl font-bold text-[#1A1A1A]/10 mb-4" style={{ fontFamily: "var(--font-oswald)" }}>
                   {p.num}
                 </div>
-                <h3
-                  className="text-xl font-bold text-[#F0F0F0] mb-3 uppercase"
-                  style={{ fontFamily: "var(--font-oswald)" }}
-                >
+                <h3 className="text-xl font-bold text-[#1A1A1A] mb-3 uppercase" style={{ fontFamily: "var(--font-oswald)" }}>
                   {p.title}
                 </h3>
-                <p className="text-[#A0A0A0] leading-relaxed">{p.text}</p>
+                <p className="text-[#555555] leading-relaxed">{p.text}</p>
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* SOBRE */}
+      <section id="sobre" className="py-24 bg-[#E8E8E8]">
+        <div className="max-w-3xl mx-auto px-6 text-center">
+          <p className="text-[#CC0000] uppercase tracking-[0.3em] text-sm font-semibold mb-4">
+            {t.sobre.tag}
+          </p>
+          <h2
+            className="text-4xl font-bold mb-6 uppercase text-[#1A1A1A]"
+            style={{ fontFamily: "var(--font-oswald)" }}
+          >
+            {t.sobre.title} <span className="text-[#CC0000]">{t.sobre.highlight}</span>
+          </h2>
+          <p className="text-[#555555] leading-relaxed text-lg">{t.sobre.text}</p>
         </div>
       </section>
 

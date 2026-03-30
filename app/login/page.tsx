@@ -5,6 +5,7 @@ import Logo from "../components/Logo";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { useState, useTransition } from "react";
 import { useLang } from "../hooks/useLang";
+import LangDropdown from "../components/LangDropdown";
 import { login } from "../actions/auth";
 
 const t = {
@@ -48,6 +49,27 @@ const t = {
       rate_limit: "Too many attempts. Please try again later.",
       erro_conexao: "Connection error. Please try again.",
       erro_generico: "An error occurred. Please try again.",
+    },
+  },
+  es: {
+    title: "Bienvenido de nuevo",
+    sub: "Acceda a su cuenta para continuar.",
+    email: "Correo electrónico",
+    senha: "Contraseña",
+    esqueci: "Olvidé mi contraseña",
+    placeholder_senha: "Su contraseña",
+    entrando: "Ingresando...",
+    entrar: "Ingresar",
+    semConta: "¿Aún no tiene cuenta?",
+    cadastrar: "Regístrese",
+    erros: {
+      email_invalido: "Ingrese un correo válido con @.",
+      senha_curta: "La contraseña debe tener al menos 6 caracteres.",
+      credenciais_incorretas: "Correo o contraseña incorrectos.",
+      email_nao_confirmado: "Correo aún no confirmado. Revise su bandeja de entrada.",
+      rate_limit: "Demasiados intentos. Inténtelo más tarde.",
+      erro_conexao: "Error de conexión. Inténtelo de nuevo.",
+      erro_generico: "Ocurrió un error. Inténtelo de nuevo.",
     },
   },
 };
@@ -103,24 +125,8 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-[#1E1E1E] flex items-center justify-center px-4 py-12">
-      {/* Toggle PT / EN */}
-      <div className="absolute top-6 right-6 flex items-center gap-1 bg-[#2B2B2B] border border-[#444444] rounded p-1">
-        <button
-          onClick={() => setLang("pt")}
-          className={`px-3 py-1 rounded text-xs font-semibold transition-colors ${
-            lang === "pt" ? "bg-[#CC0000] text-white" : "text-[#A0A0A0] hover:text-[#F0F0F0]"
-          }`}
-        >
-          PT
-        </button>
-        <button
-          onClick={() => setLang("en")}
-          className={`px-3 py-1 rounded text-xs font-semibold transition-colors ${
-            lang === "en" ? "bg-[#CC0000] text-white" : "text-[#A0A0A0] hover:text-[#F0F0F0]"
-          }`}
-        >
-          EN
-        </button>
+      <div className="absolute top-6 right-6">
+        <LangDropdown lang={lang} setLang={setLang} />
       </div>
 
       <div className="w-full max-w-md">

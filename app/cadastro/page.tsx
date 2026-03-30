@@ -5,6 +5,7 @@ import Logo from "../components/Logo";
 import { User, Mail, Lock, Phone, Eye, EyeOff } from "lucide-react";
 import { useState, useTransition } from "react";
 import { useLang } from "../hooks/useLang";
+import LangDropdown from "../components/LangDropdown";
 import { cadastrar } from "../actions/auth";
 
 const t = {
@@ -66,6 +67,36 @@ const t = {
       email_nao_confirmado: "Email not yet confirmed. Please check your inbox.",
       erro_conexao: "Connection error. Please try again.",
       erro_generico: "An error occurred. Please try again.",
+    },
+  },
+  es: {
+    title: "Cree su cuenta",
+    sub: "Únase a la plataforma de transporte ejecutivo de Sorocaba.",
+    nome: "Nombre completo",
+    placeholder_nome: "Su nombre completo",
+    email: "Correo electrónico",
+    telefone: "Teléfono con código de área",
+    telefone_hint: "(para notificaciones por WhatsApp)",
+    senha: "Contraseña",
+    placeholder_senha: "Cree una contraseña segura",
+    criando: "Creando cuenta...",
+    criar: "Crear cuenta",
+    temConta: "¿Ya tiene una cuenta?",
+    entrar: "Ingresar",
+    erros: {
+      nome_curto: "Ingrese nombre y apellido.",
+      nome_invalido: "El nombre debe contener solo letras.",
+      email_invalido: "Ingrese un correo válido con @.",
+      telefone_invalido: "Ingrese un teléfono válido con código de área (ej: (15) 99999-9999).",
+      senha_curta: "La contraseña debe tener al menos 6 caracteres.",
+      email_ja_cadastrado: "Este correo ya está registrado.",
+      email_invalido_servidor: "Correo inválido.",
+      senha_fraca: "La contraseña debe tener al menos 6 caracteres.",
+      rate_limit: "Demasiados intentos. Inténtelo más tarde.",
+      credenciais_incorretas: "Correo o contraseña incorrectos.",
+      email_nao_confirmado: "Correo aún no confirmado. Revise su bandeja de entrada.",
+      erro_conexao: "Error de conexión. Inténtelo de nuevo.",
+      erro_generico: "Ocurrió un error. Inténtelo de nuevo.",
     },
   },
 };
@@ -150,24 +181,8 @@ export default function CadastroPage() {
 
   return (
     <div className="min-h-screen bg-[#1E1E1E] flex items-center justify-center px-4 py-12">
-      {/* Toggle PT / EN */}
-      <div className="absolute top-6 right-6 flex items-center gap-1 bg-[#2B2B2B] border border-[#444444] rounded p-1">
-        <button
-          onClick={() => setLang("pt")}
-          className={`px-3 py-1 rounded text-xs font-semibold transition-colors ${
-            lang === "pt" ? "bg-[#CC0000] text-white" : "text-[#A0A0A0] hover:text-[#F0F0F0]"
-          }`}
-        >
-          PT
-        </button>
-        <button
-          onClick={() => setLang("en")}
-          className={`px-3 py-1 rounded text-xs font-semibold transition-colors ${
-            lang === "en" ? "bg-[#CC0000] text-white" : "text-[#A0A0A0] hover:text-[#F0F0F0]"
-          }`}
-        >
-          EN
-        </button>
+      <div className="absolute top-6 right-6">
+        <LangDropdown lang={lang} setLang={setLang} />
       </div>
 
       <div className="w-full max-w-md">

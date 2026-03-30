@@ -1,6 +1,7 @@
 "use client";
 
 import Navbar from "../components/Navbar";
+import LangDropdown from "../components/LangDropdown";
 import { MapPin, Navigation, Calendar, Clock, ArrowRight, Plus, X } from "lucide-react";
 import { useState, useTransition, useEffect, Suspense } from "react";
 import { useLang, type Lang } from "../hooks/useLang";
@@ -39,6 +40,22 @@ const t = {
     horario: "Time",
     enviando: "Sending...",
     solicitar: "Request ride",
+  },
+  es: {
+    tag: "Nuevo viaje",
+    title: "Solicitar servicio",
+    sub: "Complete los datos de su viaje.",
+    origem: "Lugar de origen",
+    placeholder_origem: "Dirección de salida",
+    destino: "Destino",
+    destino_final: "Destino final",
+    parada: "Parada",
+    placeholder_destino: "Dirección de destino",
+    adicionar_parada: "Agregar parada",
+    data: "Fecha",
+    horario: "Horario",
+    enviando: "Enviando...",
+    solicitar: "Solicitar servicio",
   },
 };
 
@@ -241,26 +258,8 @@ export default function SolicitarPage() {
       <div className="min-h-screen bg-[#1E1E1E] pt-24 pb-12 px-4">
         <div className="max-w-2xl mx-auto">
 
-          {/* Toggle PT / EN */}
           <div className="flex justify-end mb-6">
-            <div className="flex items-center gap-1 bg-[#2B2B2B] border border-[#444444] rounded p-1">
-              <button
-                onClick={() => setLang("pt")}
-                className={`px-3 py-1 rounded text-xs font-semibold transition-colors ${
-                  lang === "pt" ? "bg-[#CC0000] text-white" : "text-[#A0A0A0] hover:text-[#F0F0F0]"
-                }`}
-              >
-                PT
-              </button>
-              <button
-                onClick={() => setLang("en")}
-                className={`px-3 py-1 rounded text-xs font-semibold transition-colors ${
-                  lang === "en" ? "bg-[#CC0000] text-white" : "text-[#A0A0A0] hover:text-[#F0F0F0]"
-                }`}
-              >
-                EN
-              </button>
-            </div>
+            <LangDropdown lang={lang} setLang={setLang} />
           </div>
 
           <div className="mb-8">

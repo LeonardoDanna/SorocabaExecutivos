@@ -8,7 +8,7 @@ import { useState, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { logout } from "@/app/actions/auth";
 
-type Lang = "pt" | "en";
+type Lang = "pt" | "en" | "es";
 
 const labels = {
   pt: {
@@ -24,6 +24,13 @@ const labels = {
     perfil: "Profile", tipoConta: "Account type", meuPerfil: "My profile",
     meuPainel: "My panel", sair: "Sign out",
     roles: { admin: "Administrator", motorista: "Driver", cliente: "Client" },
+  },
+  es: {
+    sobre: "Sobre", servicos: "Servicios", frota: "Flota", como: "Cómo funciona",
+    entrar: "Ingresar", cadastrar: "Registrarse",
+    perfil: "Perfil", tipoConta: "Tipo de cuenta", meuPerfil: "Mi perfil",
+    meuPainel: "Mi panel", sair: "Cerrar sesión",
+    roles: { admin: "Administrador", motorista: "Conductor", cliente: "Cliente" },
   },
 };
 
@@ -156,10 +163,10 @@ export default function Navbar({ lang = "pt" }: { lang?: Lang }) {
 
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-8">
-          <Link href="#sobre" onClick={(e) => handleAnchorClick(e, "sobre")} className="text-brand-muted hover:text-brand-text transition-colors text-sm uppercase tracking-wider">{nl.sobre}</Link>
           <Link href="#servicos" onClick={(e) => handleAnchorClick(e, "servicos")} className="text-brand-muted hover:text-brand-text transition-colors text-sm uppercase tracking-wider">{nl.servicos}</Link>
           <Link href="#frota" onClick={(e) => handleAnchorClick(e, "frota")} className="text-brand-muted hover:text-brand-text transition-colors text-sm uppercase tracking-wider">{nl.frota}</Link>
           <Link href="#como-funciona" onClick={(e) => handleAnchorClick(e, "como-funciona")} className="text-brand-muted hover:text-brand-text transition-colors text-sm uppercase tracking-wider">{nl.como}</Link>
+          <Link href="#sobre" onClick={(e) => handleAnchorClick(e, "sobre")} className="text-brand-muted hover:text-brand-text transition-colors text-sm uppercase tracking-wider">{nl.sobre}</Link>
         </nav>
 
         <div className="hidden md:flex items-center gap-3">
@@ -189,10 +196,10 @@ export default function Navbar({ lang = "pt" }: { lang?: Lang }) {
       {/* Mobile menu */}
       {open && (
         <div className="md:hidden bg-[#2B2B2B] border-t border-[#444444] px-6 py-4 flex flex-col gap-4">
-          <Link href="#sobre" onClick={(e) => { setOpen(false); handleAnchorClick(e, "sobre"); }} className="text-brand-muted hover:text-brand-text text-sm uppercase tracking-wider">{nl.sobre}</Link>
           <Link href="#servicos" onClick={(e) => { setOpen(false); handleAnchorClick(e, "servicos"); }} className="text-brand-muted hover:text-brand-text text-sm uppercase tracking-wider">{nl.servicos}</Link>
           <Link href="#frota" onClick={(e) => { setOpen(false); handleAnchorClick(e, "frota"); }} className="text-brand-muted hover:text-brand-text text-sm uppercase tracking-wider">{nl.frota}</Link>
           <Link href="#como-funciona" onClick={(e) => { setOpen(false); handleAnchorClick(e, "como-funciona"); }} className="text-brand-muted hover:text-brand-text text-sm uppercase tracking-wider">{nl.como}</Link>
+          <Link href="#sobre" onClick={(e) => { setOpen(false); handleAnchorClick(e, "sobre"); }} className="text-brand-muted hover:text-brand-text text-sm uppercase tracking-wider">{nl.sobre}</Link>
           <div className="flex flex-col gap-2 pt-2 border-t border-[#444444]">
             {perfil !== null ? (
               <>
