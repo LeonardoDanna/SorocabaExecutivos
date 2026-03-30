@@ -156,7 +156,7 @@ export default function PerfilPage() {
 
   type Viagem = {
     id: string; origem: string; destino: string; paradas: string[];
-    data_hora: string; status: string; valor: number | null; avaliacao?: number | null;
+    data_hora: string; status: string; valor: number | null; observacoes?: string | null; avaliacao?: number | null;
   };
   const [proximasViagens, setProximasViagens] = useState<Viagem[]>([]);
   const [viagensAnteriores, setViagensAnteriores] = useState<Viagem[]>([]);
@@ -202,14 +202,14 @@ export default function PerfilPage() {
       setTotalViagens(count ?? 0);
 
       const { data: proximas } = await supabase.from("viagens")
-        .select("id, origem, destino, paradas, data_hora, status, valor")
+        .select("id, origem, destino, paradas, data_hora, status, valor, observacoes")
         .eq("cliente_id", user.id)
         .in("status", ["pendente", "agendada", "confirmada", "em_rota"])
         .order("data_hora", { ascending: true });
       setProximasViagens(proximas ?? []);
 
       const { data: anterioresRaw } = await supabase.from("viagens")
-        .select("id, origem, destino, paradas, data_hora, status, valor")
+        .select("id, origem, destino, paradas, data_hora, status, valor, observacoes")
         .eq("cliente_id", user.id)
         .in("status", ["concluida", "cancelada"])
         .order("data_hora", { ascending: false }).limit(10);
@@ -470,6 +470,9 @@ export default function PerfilPage() {
                           <span className="truncate">{v.destino}</span>
                         </div>
                       </div>
+                      {v.observacoes && (
+                        <p className="mt-2 text-xs text-[#A0A0A0] italic border-l-2 border-[#444] pl-2">{v.observacoes}</p>
+                      )}
                       <div className="flex items-center gap-3 mt-3 text-xs text-[#A0A0A0]">
                         <span className="flex items-center gap-1"><Calendar size={11} />{data}</span>
                         <span className="flex items-center gap-1"><Clock size={11} />{hora}</span>
@@ -553,6 +556,9 @@ export default function PerfilPage() {
                           <span className="truncate">{v.destino}</span>
                         </div>
                       </div>
+                      {v.observacoes && (
+                        <p className="mt-2 text-xs text-[#A0A0A0] italic border-l-2 border-[#444] pl-2">{v.observacoes}</p>
+                      )}
                       <div className="flex items-center gap-3 mt-3 text-xs text-[#A0A0A0]">
                         <span className="flex items-center gap-1"><Calendar size={11} />{data}</span>
                         <span className="flex items-center gap-1"><Clock size={11} />{hora}</span>

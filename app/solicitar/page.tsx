@@ -2,7 +2,8 @@
 
 import Navbar from "../components/Navbar";
 import LangDropdown from "../components/LangDropdown";
-import { MapPin, Navigation, Calendar, Clock, ArrowRight, Plus, X, MessageSquare } from "lucide-react";
+import { Calendar, Clock, ArrowRight, Plus, X, MessageSquare } from "lucide-react";
+import PlacesInput from "../components/PlacesInput";
 import { useState, useTransition, useEffect, Suspense } from "react";
 import { useLang, type Lang } from "../hooks/useLang";
 import { useSearchParams } from "next/navigation";
@@ -137,18 +138,14 @@ function SolicitarForm({ lang }: { lang: Lang }) {
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
           <label className="block text-[#A0A0A0] text-sm mb-2">{l.origem}</label>
-          <div className="relative">
-            <Navigation size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#A0A0A0]" />
-            <input
-              name="origem"
-              type="text"
-              placeholder={l.placeholder_origem}
-              value={origem}
-              onChange={(e) => setOrigem(e.target.value)}
-              required
-              className="w-full bg-[#2B2B2B] border border-[#444444] text-[#F0F0F0] placeholder-[#A0A0A0] rounded px-4 py-3 pl-10 focus:outline-none focus:border-[#CC0000] transition-colors"
-            />
-          </div>
+          <PlacesInput
+            name="origem"
+            placeholder={l.placeholder_origem}
+            value={origem}
+            onChange={setOrigem}
+            icon="origin"
+            required
+          />
         </div>
 
         <div className="space-y-3">
@@ -158,15 +155,14 @@ function SolicitarForm({ lang }: { lang: Lang }) {
                 {destinoLabel(i, destinos.length)}
               </label>
               <div className="relative flex items-center gap-2">
-                <div className="relative flex-1">
-                  <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#A0A0A0]" />
-                  <input
-                    type="text"
+                <div className="flex-1">
+                  <PlacesInput
+                    name={`destino_${i}`}
                     placeholder={l.placeholder_destino}
                     value={val}
-                    onChange={(e) => updateDestino(i, e.target.value)}
+                    onChange={(v) => updateDestino(i, v)}
+                    icon="destination"
                     required
-                    className="w-full bg-[#2B2B2B] border border-[#444444] text-[#F0F0F0] placeholder-[#A0A0A0] rounded px-4 py-3 pl-10 focus:outline-none focus:border-[#CC0000] transition-colors"
                   />
                 </div>
                 {destinos.length > 1 && (

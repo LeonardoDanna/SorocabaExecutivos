@@ -23,6 +23,7 @@ type ViagemDB = {
   data_hora: string;
   status: StatusViagem;
   valor: number | null;
+  observacoes: string | null;
   cliente_id: string;
   cliente: { nome: string; telefone: string | null } | null;
 };
@@ -415,6 +416,9 @@ export default function MotoristaPainelPage() {
                           <div className="space-y-1.5">
                             <div className="flex items-center gap-2 text-[#A0A0A0] text-sm"><Navigation size={12} /><span>{v.origem}</span></div>
                             <div className="flex items-center gap-2 text-[#F0F0F0] text-sm"><MapPin size={12} className="text-[#CC0000]" /><span>{v.destino}</span></div>
+                            {v.observacoes && (
+                              <p className="text-xs text-[#A0A0A0] italic border-l-2 border-[#444] pl-2">{v.observacoes}</p>
+                            )}
                           </div>
                           <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#333]">
                             <div className="flex items-center gap-3 text-[#A0A0A0] text-xs">
@@ -473,6 +477,9 @@ export default function MotoristaPainelPage() {
                           <div className="space-y-1.5">
                             <div className="flex items-center gap-2 text-[#A0A0A0] text-sm"><Navigation size={12} /><span>{v.origem}</span></div>
                             <div className="flex items-center gap-2 text-[#F0F0F0] text-sm"><MapPin size={12} className="text-[#CC0000]" /><span>{v.destino}</span></div>
+                            {v.observacoes && (
+                              <p className="text-xs text-[#A0A0A0] italic border-l-2 border-[#444] pl-2">{v.observacoes}</p>
+                            )}
                           </div>
                           <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#333]">
                             <div className="flex items-center gap-3 text-[#A0A0A0] text-xs">
@@ -562,6 +569,9 @@ export default function MotoristaPainelPage() {
                                 <div className="mt-2 space-y-1">
                                   <div className="flex items-center gap-2 text-[#A0A0A0] text-sm"><Navigation size={12} /><span>{v.origem}</span></div>
                                   <div className="flex items-center gap-2 text-sm"><MapPin size={12} className="text-[#CC0000]" /><span className="text-[#F0F0F0]">{v.destino}</span></div>
+                                  {v.observacoes && (
+                                    <p className="text-xs text-[#A0A0A0] italic border-l-2 border-[#444] pl-2 mt-1">{v.observacoes}</p>
+                                  )}
                                 </div>
                               </div>
                               <div className="text-right flex-shrink-0">
@@ -619,6 +629,9 @@ export default function MotoristaPainelPage() {
                           <div className="flex items-center gap-2 text-[#A0A0A0] text-sm"><Navigation size={14} /><span>{v.origem}</span></div>
                           <div className="pl-[3px]"><ChevronDown size={12} className="text-[#555]" /></div>
                           <div className="flex items-center gap-2 text-[#F0F0F0] text-sm"><MapPin size={14} className="text-[#CC0000]" /><span>{v.destino}</span></div>
+                          {v.observacoes && (
+                            <p className="text-xs text-[#A0A0A0] italic border-l-2 border-[#CC0000]/40 pl-2 mt-1">{v.observacoes}</p>
+                          )}
                         </div>
                         <div className="flex gap-3">
                           <button
