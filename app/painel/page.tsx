@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useTransition, SyntheticEvent } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Logo from "../components/Logo";
 import {
@@ -499,6 +500,8 @@ function BuscarViagem({ viagens, motoristas, clientes }: { viagens: ViagemDB[]; 
 type Aba = "dashboard" | "viagens" | "motoristas" | "relatorios" | "buscar";
 
 export default function PainelPage() {
+  const router = useRouter();
+  const [autorizado, setAutorizado] = useState(false);
   const [abaAtiva, setAbaAtiva] = useState<Aba>("dashboard");
   const [periodoConcluidas, setPeriodoConcluidas] = useState<"30d" | "3m" | "all">("30d");
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -545,7 +548,20 @@ export default function PainelPage() {
   }
 
   useEffect(() => {
-    loadData();
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user || user.user_metadata?.perfil !== "admin") {
+        router.replace("/login");
+        return;
+      }
+      setAutorizado(true);
+      loadData();
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!autorizado) return;
     const supabase = createClient();
     const sub = supabase
       .channel("motoristas-online")
@@ -560,7 +576,7 @@ export default function PainelPage() {
       })
       .subscribe();
     return () => { supabase.removeChannel(sub); };
-  }, []);
+  }, [autorizado]);
 
   async function handleToggleAtivo(motoristaId: string, ativoAtual: boolean) {
     const supabase = createClient();
@@ -644,6 +660,10 @@ export default function PainelPage() {
   function formatValor(v: number | null) {
     if (v === null) return "—";
     return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  }
+
+  if (!autorizado) {
+    return <div className="min-h-screen bg-[#1E1E1E] flex items-center justify-center"><Loader2 size={24} className="text-[#CC0000] animate-spin" /></div>;
   }
 
   return (

@@ -20,18 +20,25 @@ export async function criarViagem(formData: FormData) {
     return { erro: "Acesso negado." };
   }
 
-  const clienteId    = formData.get("cliente_id") as string;
-  const motoristaId  = formData.get("motorista_id") as string;
-  const origem       = formData.get("origem") as string;
-  const destino      = formData.get("destino") as string;
-  const data         = formData.get("data") as string;
-  const hora         = formData.get("hora") as string;
-  const valor        = formData.get("valor") as string;
-  const observacoes  = formData.get("observacoes") as string;
+  const clienteId    = (formData.get("cliente_id") as string || "").trim();
+  const motoristaId  = (formData.get("motorista_id") as string || "").trim();
+  const origem       = (formData.get("origem") as string || "").trim();
+  const destino      = (formData.get("destino") as string || "").trim();
+  const data         = (formData.get("data") as string || "").trim();
+  const hora         = (formData.get("hora") as string || "").trim();
+  const valor        = (formData.get("valor") as string || "").trim();
+  const observacoes  = (formData.get("observacoes") as string || "").trim();
 
   if (!clienteId || !origem || !destino || !data || !hora) {
     return { erro: "Preencha todos os campos obrigatórios." };
   }
+
+  if (origem.length > 300 || destino.length > 300)
+    return { erro: "Endereço muito longo." };
+  if (observacoes.length > 1000)
+    return { erro: "Observações muito longas." };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(data) || !/^\d{2}:\d{2}$/.test(hora))
+    return { erro: "Data ou hora em formato inválido." };
 
   const data_hora = new Date(`${data}T${hora}:00`).toISOString();
 
@@ -63,14 +70,22 @@ export async function criarMotorista(formData: FormData) {
     return { erro: "Acesso negado." };
   }
 
-  const nome     = formData.get("nome") as string;
-  const email    = formData.get("email") as string;
-  const telefone = formData.get("telefone") as string;
-  const senha    = formData.get("senha") as string;
+  const nome     = (formData.get("nome") as string || "").trim();
+  const email    = (formData.get("email") as string || "").trim().toLowerCase();
+  const telefone = (formData.get("telefone") as string || "").trim();
+  const senha    = (formData.get("senha") as string || "");
 
   if (!nome || !email || !senha) {
     return { erro: "Preencha todos os campos obrigatórios." };
   }
+
+  if (nome.length > 100) return { erro: "Nome muito longo." };
+  if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    return { erro: "E-mail inválido." };
+  if (telefone && telefone.length > 20)
+    return { erro: "Telefone muito longo." };
+  if (senha.length < 8) return { erro: "A senha deve ter pelo menos 8 caracteres." };
+  if (senha.length > 128) return { erro: "Senha muito longa." };
 
   const admin = createAdminClient();
 

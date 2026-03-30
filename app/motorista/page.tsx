@@ -106,7 +106,12 @@ export default function MotoristaPainelPage() {
   async function loadData() {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) { router.replace("/login"); return; }
+
+    if (user.user_metadata?.perfil !== "motorista") {
+      router.replace("/perfil");
+      return;
+    }
 
     // Perfil do motorista
     const { data: perfil } = await supabase

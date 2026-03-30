@@ -15,11 +15,24 @@ export async function solicitarCorrida(formData: FormData) {
   const data = formData.get("data") as string;
   const hora = formData.get("hora") as string;
   const paradasRaw = formData.get("paradas") as string | null;
-  const paradas: string[] = paradasRaw ? JSON.parse(paradasRaw) : [];
+  let paradas: string[] = [];
+  if (paradasRaw) {
+    try {
+      const parsed = JSON.parse(paradasRaw);
+      if (!Array.isArray(parsed) || parsed.length > 10)
+        return { erro: "Paradas inválidas." };
+      paradas = parsed.filter((p): p is string => typeof p === "string" && p.length <= 300);
+    } catch {
+      return { erro: "Formato de paradas inválido." };
+    }
+  }
 
   if (!origem || !destino || !data || !hora) {
     return { erro: "Preencha todos os campos obrigatórios." };
   }
+
+  if (origem.length > 300 || destino.length > 300)
+    return { erro: "Endereço muito longo." };
 
   const data_hora = new Date(`${data}T${hora}:00`).toISOString();
 
