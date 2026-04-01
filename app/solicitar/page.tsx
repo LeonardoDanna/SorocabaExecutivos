@@ -2,7 +2,7 @@
 
 import Navbar from "../components/Navbar";
 import LangDropdown from "../components/LangDropdown";
-import { Calendar, Clock, ArrowRight, Plus, X, MessageSquare } from "lucide-react";
+import { Calendar, ArrowRight, Plus, X, MessageSquare } from "lucide-react";
 import PlacesInput from "../components/PlacesInput";
 import { useState, useTransition, useEffect, Suspense } from "react";
 import { useLang, type Lang } from "../hooks/useLang";
@@ -187,7 +187,7 @@ function SolicitarForm({ lang }: { lang: Lang }) {
           </button>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-[#A0A0A0] text-sm mb-2">{l.data}</label>
             <div className="relative">
@@ -206,23 +206,20 @@ function SolicitarForm({ lang }: { lang: Lang }) {
             <label className="block text-[#A0A0A0] text-sm mb-2">{l.horario}</label>
             <input type="hidden" name="hora" value={`${hora}:${minuto}`} />
             <div className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <Clock size={16} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#A0A0A0] pointer-events-none" />
-                <select
-                  value={hora}
-                  onChange={(e) => setHora(e.target.value)}
-                  className={`w-full pl-8 ${selectCls}`}
-                >
-                  {Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, "0")).map((h) => (
-                    <option key={h} value={h}>{h}</option>
-                  ))}
-                </select>
-              </div>
+              <select
+                value={hora}
+                onChange={(e) => setHora(e.target.value)}
+                className={`flex-1 ${selectCls}`}
+              >
+                {Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, "0")).map((h) => (
+                  <option key={h} value={h}>{h}</option>
+                ))}
+              </select>
               <span className="text-[#A0A0A0] font-bold">:</span>
               <select
                 value={minuto}
                 onChange={(e) => setMinuto(e.target.value)}
-                className={`w-20 ${selectCls}`}
+                className={`flex-1 ${selectCls}`}
               >
                 {["00", "15", "30", "45"].map((m) => (
                   <option key={m} value={m}>{m}</option>

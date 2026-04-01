@@ -44,7 +44,7 @@ export async function solicitarCorrida(formData: FormData) {
     return { erro: "Não é possível agendar uma corrida no passado." };
   }
 
-  const { error } = await supabase.from("viagens").insert({
+  const { data: nova, error } = await supabase.from("viagens").insert({
     cliente_id: user.id,
     origem,
     destino,
@@ -52,13 +52,61 @@ export async function solicitarCorrida(formData: FormData) {
     data_hora,
     status: "pendente",
     observacoes,
-  });
+  }).select("id").single();
 
-  if (error) {
+  if (error || !nova) {
     return { erro: "Erro ao registrar a corrida. Tente novamente." };
   }
 
-  redirect("/perfil#proximas-viagens");
+  redirect(`/solicitar/confirmacao?id=${nova.id}`);
+}
+
+export async function getConfirmacao(viagemId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const admin = createAdminClient();
+
+  const { data: viagem } = await admin
+    .from("viagens")
+    .select("id, origem, destino, paradas, data_hora, status, valor, observacoes, cliente_id, motorista_id")
+    .eq("id", viagemId)
+    .single();
+
+  if (!viagem || viagem.cliente_id !== user.id) return null;
+
+  let motorista = null;
+  if (viagem.motorista_id) {
+    const { data: m } = await admin
+      .from("perfis")
+      .select("nome, telefone")
+      .eq("id", viagem.motorista_id)
+      .single();
+
+    if (m) {
+      const { data: avs } = await admin
+        .from("avaliacoes")
+        .select("nota")
+        .eq("viagem_id", viagem.id);
+      const media = avs && avs.length > 0
+        ? (avs.reduce((s, a) => s + a.nota, 0) / avs.length).toFixed(1)
+        : null;
+      motorista = { nome: m.nome, telefone: m.telefone, avaliacao: media };
+    }
+  }
+
+  return {
+    id: viagem.id,
+    origem: viagem.origem,
+    destino: viagem.destino,
+    paradas: viagem.paradas as string[],
+    data_hora: viagem.data_hora,
+    status: viagem.status as string,
+    valor: viagem.valor as number | null,
+    observacoes: viagem.observacoes as string | null,
+    motorista,
+  };
 }
 
 export async function cancelarViagem(viagemId: string) {
