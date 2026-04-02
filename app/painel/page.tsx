@@ -719,7 +719,11 @@ export default function PainelPage() {
 
   async function exportarExcel() {
     setExportando(true);
-    const result = await gerarRelatorioExcel(relatorioTodos ? null : mesRelatorio);
+    const mesFiltro = relatorioTodos ? null : mesRelatorio;
+    const pagoIds = mesFiltro
+      ? Object.keys(comissoesPagas).filter(k => k.endsWith(`_${mesFiltro}`) && comissoesPagas[k]).map(k => k.replace(`_${mesFiltro}`, ""))
+      : [];
+    const result = await gerarRelatorioExcel(mesFiltro, pagoIds);
     setExportando(false);
     if (!result || "erro" in result) return;
     const { base64, periodoLabel } = result;

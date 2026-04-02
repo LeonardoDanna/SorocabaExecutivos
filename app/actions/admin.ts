@@ -114,7 +114,7 @@ export async function criarMotorista(formData: FormData) {
   return { sucesso: true };
 }
 
-export async function gerarRelatorioExcel(mesFiltro: string | null = null) {
+export async function gerarRelatorioExcel(mesFiltro: string | null = null, pagoIds: string[] = []) {
   try {
     await verificarAdmin();
   } catch {
@@ -238,12 +238,14 @@ export async function gerarRelatorioExcel(mesFiltro: string | null = null) {
     { header: "Viagens",            key: "viagens",  width: 14 },
     { header: "Faturamento (R$)",   key: "total",    width: 22 },
     { header: "Comissão 10% (R$)",  key: "comissao", width: 22 },
+    ...(mesFiltro ? [{ header: "Status Comissão", key: "status_pago", width: 20 }] : []),
   ];
 
   wsResumo.getRow(1).eachCell((cell) => { headerStyle(cell); cell.alignment = { vertical: "middle", horizontal: "center", indent: 1 }; });
   wsResumo.getRow(1).height = 26;
 
   ranking.forEach((m, i) => {
+    const pago = pagoIds.includes(m.id);
     const row = wsResumo.addRow({
       nome: m.nome,
       telefone: m.telefone ?? "—",
@@ -251,6 +253,7 @@ export async function gerarRelatorioExcel(mesFiltro: string | null = null) {
       viagens: m.viagens,
       total: m.total,
       comissao: +(m.total * 0.1).toFixed(2),
+      ...(mesFiltro ? { status_pago: pago ? "✓ Pago" : "Pendente" } : {}),
     });
     const bg = rowBg(i);
     row.height = 18;
@@ -258,6 +261,11 @@ export async function gerarRelatorioExcel(mesFiltro: string | null = null) {
     row.getCell("viagens").alignment = { horizontal: "center" };
     row.getCell("total").numFmt = brl; row.getCell("total").alignment = { horizontal: "center" };
     row.getCell("comissao").numFmt = brl; row.getCell("comissao").alignment = { horizontal: "center" };
+    if (mesFiltro) {
+      const statusCell = row.getCell("status_pago");
+      statusCell.alignment = { horizontal: "center" };
+      statusCell.font = { bold: true, color: { argb: pago ? "FF22C55E" : "FFCC0000" } };
+    }
   });
 
   const totalRow = wsResumo.addRow({
@@ -265,13 +273,15 @@ export async function gerarRelatorioExcel(mesFiltro: string | null = null) {
     viagens: ranking.reduce((a, m) => a + m.viagens, 0),
     total: faturamentoTotal,
     comissao: +(comissaoTotal).toFixed(2),
+    ...(mesFiltro ? { status_pago: `${pagoIds.length}/${ranking.length} pagos` } : {}),
   });
   totalRow.eachCell(totalStyle);
   totalRow.getCell("total").numFmt = brl;
   totalRow.getCell("comissao").numFmt = brl;
 
+  const colsResumo = mesFiltro ? 7 : 6;
   wsResumo.insertRow(1, [`Relatório Sorocaba Executivos — ${periodoLabel}`]);
-  wsResumo.mergeCells(1, 1, 1, 6);
+  wsResumo.mergeCells(1, 1, 1, colsResumo);
   titleStyle(wsResumo.getCell("A1"));
   wsResumo.getRow(1).height = 28;
 
