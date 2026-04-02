@@ -100,6 +100,11 @@ export default function MotoristaPainelPage() {
   const [viagens, setViagens] = useState<ViagemDB[]>([]);
   const [avaliacoes, setAvaliacoes] = useState<AvaliacaoRow[]>([]);
   const [periodoMetricas, setPeriodoMetricas] = useState<"dia" | "semana" | "mes" | "ano" | "all">("mes");
+  const [mesMetricas, setMesMetricas] = useState<string>(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  });
+  const [metricasTodos, setMetricasTodos] = useState(false);
 
   const semana = semanaAtual();
   const hoje = new Date();
@@ -622,7 +627,9 @@ export default function MotoristaPainelPage() {
                           </div>
                           <div>
                             <p className="text-[#F0F0F0] font-semibold">{v.cliente?.nome ?? "Cliente"}</p>
-                            <p className="text-[#A0A0A0] text-xs">{formatHora(v.data_hora)} — {formatValor(v.valor)}</p>
+                            <p className="text-[#A0A0A0] text-xs">
+                              {new Date(v.data_hora).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })} · {formatHora(v.data_hora)} — {formatValor(v.valor)}
+                            </p>
                           </div>
                         </div>
                         <div className="space-y-1">
@@ -656,102 +663,146 @@ export default function MotoristaPainelPage() {
           )}
 
           {/* ── Métricas ── */}
-          {aba === "metricas" && (
-            <div className="space-y-6">
-              <div className="flex items-end justify-between gap-4">
+          {aba === "metricas" && (() => {
+            const nomesMes = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+            function labelMes(ym: string) {
+              const [y, m] = ym.split("-");
+              return `${nomesMes[parseInt(m) - 1]} ${y}`;
+            }
+
+            const mesesDisponiveis = Array.from(
+              new Set(viagens.filter(v => v.status === "concluida").map(v => v.data_hora.slice(0, 7)))
+            ).sort((a, b) => b.localeCompare(a));
+
+            const viagensMes = metricasTodos
+              ? viagens.filter(v => v.status === "concluida")
+              : viagens.filter(v => v.status === "concluida" && v.data_hora.startsWith(mesMetricas));
+            const faturamentoMes = viagensMes.reduce((acc, v) => acc + (v.valor ?? 0), 0);
+            const avaliacoesMes = metricasTodos ? avaliacoes : avaliacoes.filter(a => a.created_at.startsWith(mesMetricas));
+            const mediaMes = avaliacoesMes.length
+              ? avaliacoesMes.reduce((s, a) => s + a.nota, 0) / avaliacoesMes.length
+              : null;
+            const labelAtual = metricasTodos ? "todos os tempos" : labelMes(mesMetricas);
+
+            return (
+              <div className="space-y-6">
                 <div>
                   <p className="text-[#CC0000] uppercase tracking-[0.3em] text-xs font-semibold mb-1">Desempenho</p>
                   <h1 className="text-3xl font-bold text-[#F0F0F0] uppercase" style={{ fontFamily: "var(--font-oswald)" }}>Métricas</h1>
                 </div>
-                <select
-                  value={periodoMetricas}
-                  onChange={(e) => setPeriodoMetricas(e.target.value as typeof periodoMetricas)}
-                  className="bg-[#2B2B2B] border border-[#444] text-[#A0A0A0] text-xs rounded px-2 py-1.5 focus:outline-none focus:border-[#CC0000] mb-1"
-                >
-                  <option value="dia">Hoje</option>
-                  <option value="semana">Esta semana</option>
-                  <option value="mes">Este mês</option>
-                  <option value="ano">Este ano</option>
-                  <option value="all">Desde sempre</option>
-                </select>
-              </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                {/* Card: Avaliação média */}
-                <div className="bg-[#2B2B2B] border border-[#444] rounded-xl p-5 shadow-[0_4px_20px_rgba(0,0,0,0.4)]">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-[#A0A0A0] text-xs">Avaliação média</span>
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#F59E0B22]">
-                      <Star size={15} className="text-[#F59E0B]" />
-                    </div>
-                  </div>
-                  <p className="text-2xl font-bold text-[#F0F0F0]">{loading ? "—" : (avaliacaoMedia !== null ? avaliacaoMedia.toFixed(1) : "—")}</p>
-                  <p className="text-xs text-[#A0A0A0] mt-1">por clientes</p>
-                </div>
-
-                {/* Card: Viagens concluídas */}
-                <div className="bg-[#2B2B2B] border border-[#444] rounded-xl p-5 shadow-[0_4px_20px_rgba(0,0,0,0.4)]">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-[#A0A0A0] text-xs">Viagens concluídas</span>
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#CC000022]">
-                      <Car size={15} className="text-[#CC0000]" />
-                    </div>
-                  </div>
-                  <p className="text-2xl font-bold text-[#F0F0F0]">{loading ? "—" : viagensPeriodo.length}</p>
-                  <p className="text-xs text-[#A0A0A0] mt-1">{labelPeriodo[periodoMetricas]}</p>
-                </div>
-
-                {/* Card: Faturamento */}
-                <div className="bg-[#2B2B2B] border border-[#444] rounded-xl p-5 shadow-[0_4px_20px_rgba(0,0,0,0.4)]">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-[#A0A0A0] text-xs">Faturamento</span>
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#22C55E22]">
-                      <TrendingUp size={15} className="text-[#22C55E]" />
-                    </div>
-                  </div>
-                  <p className="text-2xl font-bold text-[#F0F0F0]">{loading ? "—" : faturamentoPeriodo.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</p>
-                  <p className="text-xs text-[#A0A0A0] mt-1">{labelPeriodo[periodoMetricas]}</p>
-                </div>
-              </div>
-
-              {/* Avaliações recentes */}
-              <div className="bg-[#2B2B2B] border border-[#444] rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.4)]">
-                <div className="px-6 py-4 border-b border-[#444]">
-                  <h2 className="text-[#F0F0F0] font-semibold">Avaliações recentes</h2>
-                </div>
-                {loading ? (
-                  <p className="px-6 py-8 text-center text-[#A0A0A0] text-sm animate-pulse">Carregando...</p>
-                ) : avaliacoes.length === 0 ? (
-                  <div className="p-12 text-center">
-                    <Star size={36} className="text-[#444] mx-auto mb-3" />
-                    <p className="text-[#A0A0A0] text-sm">Nenhuma avaliação ainda.</p>
-                  </div>
-                ) : (
-                  <div className="divide-y divide-[#333]">
-                    {avaliacoes.map((a, i) => (
-                      <div key={i} className="px-6 py-4 flex items-start gap-4">
-                        <div className="w-9 h-9 rounded-full bg-[#333] flex items-center justify-center text-[#F0F0F0] text-xs font-bold flex-shrink-0">
-                          {(a.avaliador?.nome ?? "C").split(" ").map((n: string) => n[0]).slice(0, 2).join("")}
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between">
-                            <p className="text-[#F0F0F0] text-sm font-medium">{a.avaliador?.nome ?? "Cliente"}</p>
-                            <span className="text-[#A0A0A0] text-xs">{new Date(a.created_at).toLocaleDateString("pt-BR")}</span>
-                          </div>
-                          <div className="flex items-center gap-0.5 my-1">
-                            {[1,2,3,4,5].map(i => (
-                              <Star key={i} size={12} className={i <= a.nota ? "text-[#F59E0B] fill-[#F59E0B]" : "text-[#444]"} />
-                            ))}
-                          </div>
-                          {a.comentario && <p className="text-[#A0A0A0] text-sm">{a.comentario}</p>}
-                        </div>
-                      </div>
+                {/* Seletor de mês */}
+                {mesesDisponiveis.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {mesesDisponiveis.map(ym => (
+                      <button
+                        key={ym}
+                        onClick={() => { setMesMetricas(ym); setMetricasTodos(false); }}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border ${
+                          !metricasTodos && mesMetricas === ym
+                            ? "bg-[#CC0000] border-[#CC0000] text-white"
+                            : "bg-[#2B2B2B] border-[#444] text-[#A0A0A0] hover:text-[#F0F0F0] hover:border-[#666]"
+                        }`}
+                      >
+                        {labelMes(ym)}
+                      </button>
                     ))}
+                    <button
+                      onClick={() => setMetricasTodos(true)}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border ${
+                        metricasTodos
+                          ? "bg-[#CC0000] border-[#CC0000] text-white"
+                          : "bg-[#2B2B2B] border-[#444] text-[#A0A0A0] hover:text-[#F0F0F0] hover:border-[#666]"
+                      }`}
+                    >
+                      Todos os tempos
+                    </button>
                   </div>
                 )}
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  <div className="bg-[#2B2B2B] border border-[#444] rounded-xl p-5 shadow-[0_4px_20px_rgba(0,0,0,0.4)]">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-[#A0A0A0] text-xs">Avaliação média</span>
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#F59E0B22]">
+                        <Star size={15} className="text-[#F59E0B]" />
+                      </div>
+                    </div>
+                    <p className="text-2xl font-bold text-[#F0F0F0]">{loading ? "—" : (mediaMes !== null ? mediaMes.toFixed(1) : "—")}</p>
+                    <p className="text-xs text-[#A0A0A0] mt-1">{mesesDisponiveis.length > 0 ? labelAtual : "por clientes"}</p>
+                  </div>
+
+                  <div className="bg-[#2B2B2B] border border-[#444] rounded-xl p-5 shadow-[0_4px_20px_rgba(0,0,0,0.4)]">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-[#A0A0A0] text-xs">Viagens concluídas</span>
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#CC000022]">
+                        <Car size={15} className="text-[#CC0000]" />
+                      </div>
+                    </div>
+                    <p className="text-2xl font-bold text-[#F0F0F0]">{loading ? "—" : viagensMes.length}</p>
+                    <p className="text-xs text-[#A0A0A0] mt-1">{mesesDisponiveis.length > 0 ? labelAtual : "este mês"}</p>
+                  </div>
+
+                  <div className="bg-[#2B2B2B] border border-[#444] rounded-xl p-5 shadow-[0_4px_20px_rgba(0,0,0,0.4)]">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-[#A0A0A0] text-xs">Faturamento</span>
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#22C55E22]">
+                        <TrendingUp size={15} className="text-[#22C55E]" />
+                      </div>
+                    </div>
+                    <p className="text-2xl font-bold text-[#F0F0F0]">{loading ? "—" : faturamentoMes.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</p>
+                    <p className="text-xs text-[#A0A0A0] mt-1">{mesesDisponiveis.length > 0 ? labelAtual : "este mês"}</p>
+                    {!loading && faturamentoMes > 0 && !metricasTodos && (
+                      <div className="mt-3 pt-3 border-t border-[#333] flex items-center justify-between">
+                        <span className="text-xs text-[#A0A0A0]">Comissão (10%)</span>
+                        <span className="text-xs font-semibold text-[#CC0000]">
+                          {(faturamentoMes * 0.1).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Avaliações do mês */}
+                <div className="bg-[#2B2B2B] border border-[#444] rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.4)]">
+                  <div className="px-6 py-4 border-b border-[#444] flex items-center justify-between">
+                    <h2 className="text-[#F0F0F0] font-semibold">Avaliações</h2>
+                    {mesesDisponiveis.length > 0 && <span className="text-[#A0A0A0] text-xs">{labelAtual}</span>}
+                  </div>
+                  {loading ? (
+                    <p className="px-6 py-8 text-center text-[#A0A0A0] text-sm animate-pulse">Carregando...</p>
+                  ) : avaliacoesMes.length === 0 ? (
+                    <div className="p-12 text-center">
+                      <Star size={36} className="text-[#444] mx-auto mb-3" />
+                      <p className="text-[#A0A0A0] text-sm">Nenhuma avaliação neste mês.</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-[#333]">
+                      {avaliacoesMes.map((a, i) => (
+                        <div key={i} className="px-6 py-4 flex items-start gap-4">
+                          <div className="w-9 h-9 rounded-full bg-[#333] flex items-center justify-center text-[#F0F0F0] text-xs font-bold flex-shrink-0">
+                            {(a.avaliador?.nome ?? "C").split(" ").map((n: string) => n[0]).slice(0, 2).join("")}
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <p className="text-[#F0F0F0] text-sm font-medium">{a.avaliador?.nome ?? "Cliente"}</p>
+                              <span className="text-[#A0A0A0] text-xs">{new Date(a.created_at).toLocaleDateString("pt-BR")}</span>
+                            </div>
+                            <div className="flex items-center gap-0.5 my-1">
+                              {[1,2,3,4,5].map(s => (
+                                <Star key={s} size={12} className={s <= a.nota ? "text-[#F59E0B] fill-[#F59E0B]" : "text-[#444]"} />
+                              ))}
+                            </div>
+                            {a.comentario && <p className="text-[#A0A0A0] text-sm">{a.comentario}</p>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
         </div>
       </main>

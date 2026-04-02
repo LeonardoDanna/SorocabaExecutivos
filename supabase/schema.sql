@@ -21,6 +21,9 @@ CREATE TABLE public.perfis (
 
 -- Migration para bancos existentes:
 -- ALTER TABLE public.perfis ADD COLUMN IF NOT EXISTS online BOOLEAN NOT NULL DEFAULT false;
+-- ALTER TABLE public.perfis ADD COLUMN IF NOT EXISTS veiculo_modelo TEXT;
+-- ALTER TABLE public.perfis ADD COLUMN IF NOT EXISTS veiculo_placa TEXT;
+-- ALTER TABLE public.perfis ADD COLUMN IF NOT EXISTS veiculo_cor TEXT;
 
 -- RLS
 ALTER TABLE public.perfis ENABLE ROW LEVEL SECURITY;

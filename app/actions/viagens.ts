@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { notificarAdminNovaViagem } from "@/lib/email";
 
 export async function solicitarCorrida(formData: FormData) {
   const supabase = await createClient();
@@ -58,6 +59,15 @@ export async function solicitarCorrida(formData: FormData) {
     return { erro: "Erro ao registrar a corrida. Tente novamente." };
   }
 
+  const { data: perfil } = await supabase.from("perfis").select("nome").eq("id", user.id).single();
+  notificarAdminNovaViagem({
+    viagemId: nova.id,
+    cliente: perfil?.nome ?? "Cliente",
+    origem,
+    destino,
+    dataHora: data_hora,
+  }).catch(() => {});
+
   redirect(`/solicitar/confirmacao?id=${nova.id}`);
 }
 
@@ -80,7 +90,7 @@ export async function getConfirmacao(viagemId: string) {
   if (viagem.motorista_id) {
     const { data: m } = await admin
       .from("perfis")
-      .select("nome, telefone")
+      .select("nome, telefone, veiculo_modelo, veiculo_placa, veiculo_cor")
       .eq("id", viagem.motorista_id)
       .single();
 
@@ -92,7 +102,14 @@ export async function getConfirmacao(viagemId: string) {
       const media = avs && avs.length > 0
         ? (avs.reduce((s, a) => s + a.nota, 0) / avs.length).toFixed(1)
         : null;
-      motorista = { nome: m.nome, telefone: m.telefone, avaliacao: media };
+      motorista = {
+        nome: m.nome,
+        telefone: m.telefone,
+        avaliacao: media,
+        veiculo_modelo: m.veiculo_modelo as string | null,
+        veiculo_placa: m.veiculo_placa as string | null,
+        veiculo_cor: m.veiculo_cor as string | null,
+      };
     }
   }
 

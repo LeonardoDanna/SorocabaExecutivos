@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Navbar from "../../components/Navbar";
 import {
   CheckCircle, MapPin, Navigation, Calendar, Clock,
-  Phone, Star, MessageCircle, Loader2, ChevronDown,
+  Phone, Star, MessageCircle, Loader2, ChevronDown, Car,
 } from "lucide-react";
 import Link from "next/link";
 import { getConfirmacao } from "@/app/actions/viagens";
@@ -194,6 +194,18 @@ function ConfirmacaoContent() {
               )}
             </div>
 
+            {viagem.motorista.veiculo_modelo && (
+              <div className="mt-4 pt-4 border-t border-[#333] flex items-center gap-2 text-sm text-[#A0A0A0]">
+                <Car size={14} className="flex-shrink-0" />
+                <span className="text-[#F0F0F0]">{viagem.motorista.veiculo_modelo}</span>
+                {viagem.motorista.veiculo_placa && (
+                  <span className="bg-[#1E1E1E] border border-[#444] px-2 py-0.5 rounded font-mono text-xs">{viagem.motorista.veiculo_placa}</span>
+                )}
+                {viagem.motorista.veiculo_cor && (
+                  <span>· {viagem.motorista.veiculo_cor}</span>
+                )}
+              </div>
+            )}
             {viagem.motorista.telefone && (
               <a
                 href={`https://wa.me/55${viagem.motorista.telefone.replace(/\D/g, "")}`}

@@ -114,7 +114,7 @@ export async function criarMotorista(formData: FormData) {
   return { sucesso: true };
 }
 
-export async function gerarRelatorioExcel() {
+export async function gerarRelatorioExcel(mesFiltro: string | null = null) {
   try {
     await verificarAdmin();
   } catch {
@@ -122,126 +122,208 @@ export async function gerarRelatorioExcel() {
   }
 
   const admin = createAdminClient();
-  const { data: viagens } = await admin
+
+  let query = admin
     .from("viagens")
-    .select("id, origem, destino, data_hora, status, valor, cliente:perfis!cliente_id(nome), motorista:perfis!motorista_id(nome)")
+    .select(`id, motorista_id, origem, destino, paradas, data_hora, status, valor, observacoes,
+      cliente:perfis!cliente_id(nome, telefone),
+      motorista:perfis!motorista_id(nome, telefone, veiculo_modelo, veiculo_placa, veiculo_cor)`)
     .eq("status", "concluida")
     .order("data_hora", { ascending: false });
 
-  const concluidas = viagens ?? [];
-  const mes = new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
-
-  const porMotorista: Record<string, { nome: string; viagens: number; total: number }> = {};
-  for (const v of concluidas) {
-    if (!v.motorista) continue;
-    const nome = (v.motorista as unknown as { nome: string }).nome;
-    if (!porMotorista[nome]) porMotorista[nome] = { nome, viagens: 0, total: 0 };
-    porMotorista[nome].viagens += 1;
-    porMotorista[nome].total += v.valor ?? 0;
+  if (mesFiltro) {
+    const [ano, mes] = mesFiltro.split("-").map(Number);
+    const proximoMes = mes === 12 ? `${ano + 1}-01` : `${ano}-${String(mes + 1).padStart(2, "0")}`;
+    query = query
+      .gte("data_hora", `${mesFiltro}-01T00:00:00.000Z`)
+      .lt("data_hora", `${proximoMes}-01T00:00:00.000Z`);
   }
+
+  const { data: viagens } = await query;
+  const concluidas = viagens ?? [];
+
+  const nomesMes = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+  const periodoLabel = mesFiltro
+    ? `${nomesMes[parseInt(mesFiltro.slice(5, 7)) - 1]} ${mesFiltro.slice(0, 4)}`
+    : "Todos os tempos";
+
+  // ── Calcular KPIs ─────────────────────────────────────
+  const faturamentoTotal = concluidas.reduce((acc, v) => acc + (v.valor ?? 0), 0);
+  const comissaoTotal = faturamentoTotal * 0.1;
+  const ticketMedio = concluidas.filter(v => v.valor).length
+    ? faturamentoTotal / concluidas.filter(v => v.valor).length
+    : 0;
+
+  type MotoristaRow = { nome: string; telefone: string | null; veiculo_modelo: string | null; veiculo_placa: string | null; veiculo_cor: string | null };
+  const porMotorista: Record<string, { id: string; nome: string; telefone: string | null; veiculo: string; viagens: number; total: number }> = {};
+  for (const v of concluidas) {
+    if (!v.motorista_id || !v.valor) continue;
+    const m = v.motorista as unknown as MotoristaRow | null;
+    const nome = m?.nome ?? "Sem nome";
+    const tel = m?.telefone ?? null;
+    const veiculo = [m?.veiculo_modelo, m?.veiculo_placa, m?.veiculo_cor].filter(Boolean).join(" · ") || "—";
+    if (!porMotorista[v.motorista_id]) porMotorista[v.motorista_id] = { id: v.motorista_id, nome, telefone: tel, veiculo, viagens: 0, total: 0 };
+    porMotorista[v.motorista_id].viagens += 1;
+    porMotorista[v.motorista_id].total += v.valor;
+  }
+  const ranking = Object.values(porMotorista).sort((a, b) => b.total - a.total);
 
   const wb = new ExcelJS.Workbook();
   wb.creator = "Sorocaba Executivos";
   wb.created = new Date();
 
-  // ── Aba 1: Resumo ──────────────────────────────────────
-  const wsResumo = wb.addWorksheet("Resumo por Motorista");
-  wsResumo.columns = [
-    { header: "Motorista",          key: "nome",     width: 30 },
-    { header: "Viagens concluídas", key: "viagens",  width: 20 },
-    { header: "Faturamento (R$)",   key: "total",    width: 20 },
-    { header: "Comissão 10% (R$)",  key: "comissao", width: 20 },
+  // helpers
+  function headerStyle(cell: ExcelJS.Cell) {
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFCC0000" } };
+    cell.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 11 };
+    cell.alignment = { vertical: "middle", horizontal: "center" };
+  }
+  function titleStyle(cell: ExcelJS.Cell) {
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1A1A1A" } };
+    cell.font = { bold: true, size: 13, color: { argb: "FFFFFFFF" } };
+    cell.alignment = { horizontal: "center", vertical: "middle" };
+  }
+  function totalStyle(cell: ExcelJS.Cell) {
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFCC0000" } };
+    cell.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 11 };
+    cell.alignment = { horizontal: "center" };
+  }
+  const brl = "R$ #,##0.00";
+  const rowBg = (i: number) => i % 2 === 0 ? "FFF5F5F5" : "FFFFFFFF";
+
+  // ── Aba 1: Visão Geral ─────────────────────────────────
+  const wsGeral = wb.addWorksheet("Visão Geral");
+  wsGeral.columns = [
+    { key: "label", width: 30 },
+    { key: "valor", width: 25 },
   ];
 
-  wsResumo.getRow(1).eachCell((cell) => {
-    cell.fill      = { type: "pattern", pattern: "solid", fgColor: { argb: "FFCC0000" } };
-    cell.font      = { bold: true, color: { argb: "FFFFFFFF" }, size: 11 };
-    cell.alignment = { vertical: "middle", horizontal: "center" };
-  });
-  wsResumo.getRow(1).height = 22;
+  wsGeral.addRow([`Relatório Sorocaba Executivos`]);
+  wsGeral.mergeCells(1, 1, 1, 2);
+  titleStyle(wsGeral.getCell("A1"));
+  wsGeral.getRow(1).height = 30;
 
-  const ranking = Object.values(porMotorista).sort((a, b) => b.total - a.total);
-  ranking.forEach((m, i) => {
-    const row = wsResumo.addRow({ nome: m.nome, viagens: m.viagens, total: m.total, comissao: +(m.total * 0.1).toFixed(2) });
-    const bg = i % 2 === 0 ? "FFF5F5F5" : "FFFFFFFF";
-    row.eachCell((cell) => {
-      cell.fill      = { type: "pattern", pattern: "solid", fgColor: { argb: bg } };
-      cell.alignment = { horizontal: "center" };
+  wsGeral.addRow([`Período: ${periodoLabel}`]);
+  wsGeral.mergeCells(2, 1, 2, 2);
+  wsGeral.getCell("A2").font = { italic: true, color: { argb: "FF888888" }, size: 10 };
+  wsGeral.getCell("A2").alignment = { horizontal: "center" };
+  wsGeral.addRow([]);
+
+  const kpis = [
+    ["Faturamento Total", faturamentoTotal],
+    ["Comissão Admin (10%)", comissaoTotal],
+    ["Viagens Concluídas", concluidas.length],
+    ["Ticket Médio", ticketMedio],
+    ["Motoristas ativos", ranking.length],
+    ["Exportado em", new Date().toLocaleString("pt-BR")],
+  ];
+  kpis.forEach(([label, valor], i) => {
+    const row = wsGeral.addRow({ label, valor });
+    const bg = rowBg(i);
+    row.eachCell(cell => {
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: bg } };
+      cell.alignment = { horizontal: "left", indent: 1 };
     });
-    row.getCell("total").numFmt   = "R$ #,##0.00";
-    row.getCell("comissao").numFmt = "R$ #,##0.00";
+    if (typeof valor === "number" && i < 4) {
+      row.getCell("valor").numFmt = brl;
+    }
   });
 
-  const faturamentoTotal = ranking.reduce((acc, m) => acc + m.total, 0);
+  // ── Aba 2: Faturamento por Motorista ──────────────────
+  const wsResumo = wb.addWorksheet("Por Motorista");
+  wsResumo.columns = [
+    { header: "Motorista",          key: "nome",     width: 34 },
+    { header: "Telefone",           key: "telefone", width: 22 },
+    { header: "Veículo",            key: "veiculo",  width: 40 },
+    { header: "Viagens",            key: "viagens",  width: 14 },
+    { header: "Faturamento (R$)",   key: "total",    width: 22 },
+    { header: "Comissão 10% (R$)",  key: "comissao", width: 22 },
+  ];
+
+  wsResumo.getRow(1).eachCell((cell) => { headerStyle(cell); cell.alignment = { vertical: "middle", horizontal: "center", indent: 1 }; });
+  wsResumo.getRow(1).height = 26;
+
+  ranking.forEach((m, i) => {
+    const row = wsResumo.addRow({
+      nome: m.nome,
+      telefone: m.telefone ?? "—",
+      veiculo: m.veiculo,
+      viagens: m.viagens,
+      total: m.total,
+      comissao: +(m.total * 0.1).toFixed(2),
+    });
+    const bg = rowBg(i);
+    row.height = 18;
+    row.eachCell(cell => { cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: bg } }; cell.alignment = { horizontal: "left", indent: 1 }; });
+    row.getCell("viagens").alignment = { horizontal: "center" };
+    row.getCell("total").numFmt = brl; row.getCell("total").alignment = { horizontal: "center" };
+    row.getCell("comissao").numFmt = brl; row.getCell("comissao").alignment = { horizontal: "center" };
+  });
+
   const totalRow = wsResumo.addRow({
-    nome: "TOTAL GERAL",
-    viagens: ranking.reduce((acc, m) => acc + m.viagens, 0),
+    nome: "TOTAL GERAL", telefone: "", veiculo: "",
+    viagens: ranking.reduce((a, m) => a + m.viagens, 0),
     total: faturamentoTotal,
-    comissao: +(faturamentoTotal * 0.1).toFixed(2),
+    comissao: +(comissaoTotal).toFixed(2),
   });
-  totalRow.eachCell((cell) => {
-    cell.fill  = { type: "pattern", pattern: "solid", fgColor: { argb: "FFCC0000" } };
-    cell.font  = { bold: true, color: { argb: "FFFFFFFF" }, size: 11 };
-    cell.alignment = { horizontal: "center" };
-  });
-  totalRow.getCell("total").numFmt   = "R$ #,##0.00";
-  totalRow.getCell("comissao").numFmt = "R$ #,##0.00";
+  totalRow.eachCell(totalStyle);
+  totalRow.getCell("total").numFmt = brl;
+  totalRow.getCell("comissao").numFmt = brl;
 
-  // Título aba 1
-  wsResumo.insertRow(1, [`Relatório Sorocaba Executivos — ${mes}`]);
-  wsResumo.mergeCells(1, 1, 1, 4);
-  const t1 = wsResumo.getCell("A1");
-  t1.font      = { bold: true, size: 13, color: { argb: "FFFFFFFF" } };
-  t1.alignment = { horizontal: "center", vertical: "middle" };
-  t1.fill      = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1A1A1A" } };
+  wsResumo.insertRow(1, [`Relatório Sorocaba Executivos — ${periodoLabel}`]);
+  wsResumo.mergeCells(1, 1, 1, 6);
+  titleStyle(wsResumo.getCell("A1"));
   wsResumo.getRow(1).height = 28;
 
-  // ── Aba 2: Viagens Detalhadas ──────────────────────────
+  // ── Aba 3: Viagens Detalhadas ─────────────────────────
   const wsDetalhes = wb.addWorksheet("Viagens Detalhadas");
   wsDetalhes.columns = [
-    { header: "#ID",        key: "id",        width: 12 },
-    { header: "Cliente",    key: "cliente",   width: 25 },
-    { header: "Motorista",  key: "motorista", width: 25 },
-    { header: "Origem",     key: "origem",    width: 30 },
-    { header: "Destino",    key: "destino",   width: 30 },
-    { header: "Data/Hora",  key: "data_hora", width: 22 },
-    { header: "Valor (R$)", key: "valor",     width: 15 },
+    { header: "#ID",           key: "id",        width: 14 },
+    { header: "Data/Hora",     key: "data_hora", width: 22 },
+    { header: "Cliente",       key: "cliente",   width: 26 },
+    { header: "Motorista",     key: "motorista", width: 26 },
+    { header: "Veículo",       key: "veiculo",   width: 38 },
+    { header: "Origem",        key: "origem",    width: 42 },
+    { header: "Destino",       key: "destino",   width: 42 },
+    { header: "Paradas",       key: "paradas",   width: 36 },
+    { header: "Observações",   key: "obs",       width: 32 },
+    { header: "Valor (R$)",    key: "valor",     width: 16 },
   ];
 
-  wsDetalhes.getRow(1).eachCell((cell) => {
-    cell.fill      = { type: "pattern", pattern: "solid", fgColor: { argb: "FFCC0000" } };
-    cell.font      = { bold: true, color: { argb: "FFFFFFFF" }, size: 11 };
-    cell.alignment = { vertical: "middle", horizontal: "center" };
-  });
-  wsDetalhes.getRow(1).height = 22;
+  wsDetalhes.getRow(1).eachCell((cell) => { headerStyle(cell); cell.alignment = { vertical: "middle", horizontal: "center", indent: 1 }; });
+  wsDetalhes.getRow(1).height = 26;
 
   concluidas.forEach((v, i) => {
+    const cli = v.cliente as unknown as { nome: string } | null;
+    const mot = v.motorista as unknown as MotoristaRow | null;
+    const veiculo = [mot?.veiculo_modelo, mot?.veiculo_placa, mot?.veiculo_cor].filter(Boolean).join(" · ") || "—";
+    const paradas = Array.isArray(v.paradas) && (v.paradas as string[]).length > 0
+      ? (v.paradas as string[]).join(" → ")
+      : "—";
     const row = wsDetalhes.addRow({
       id:        v.id.slice(0, 8).toUpperCase(),
-      cliente:   (v.cliente as unknown as { nome: string } | null)?.nome ?? "—",
-      motorista: (v.motorista as unknown as { nome: string } | null)?.nome ?? "—",
+      data_hora: new Date(v.data_hora).toLocaleString("pt-BR"),
+      cliente:   cli?.nome ?? "—",
+      motorista: mot?.nome ?? "—",
+      veiculo,
       origem:    v.origem,
       destino:   v.destino,
-      data_hora: new Date(v.data_hora).toLocaleString("pt-BR"),
+      paradas,
+      obs:       (v.observacoes as string | null) ?? "—",
       valor:     v.valor ?? 0,
     });
-    const bg = i % 2 === 0 ? "FFF5F5F5" : "FFFFFFFF";
-    row.eachCell((cell) => {
-      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: bg } };
-      cell.alignment = { horizontal: "center" };
-    });
-    row.getCell("valor").numFmt = "R$ #,##0.00";
+    const bg = rowBg(i);
+    row.height = 18;
+    row.eachCell(cell => { cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: bg } }; cell.alignment = { horizontal: "left", indent: 1, wrapText: false }; });
+    row.getCell("valor").numFmt = brl;
+    row.getCell("valor").alignment = { horizontal: "center" };
   });
 
-  // Título aba 2
-  wsDetalhes.insertRow(1, [`Relatório Sorocaba Executivos — ${mes}`]);
-  wsDetalhes.mergeCells(1, 1, 1, 7);
-  const t2 = wsDetalhes.getCell("A1");
-  t2.font      = { bold: true, size: 13, color: { argb: "FFFFFFFF" } };
-  t2.alignment = { horizontal: "center", vertical: "middle" };
-  t2.fill      = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1A1A1A" } };
+  wsDetalhes.insertRow(1, [`Relatório Sorocaba Executivos — ${periodoLabel}`]);
+  wsDetalhes.mergeCells(1, 1, 1, 10);
+  titleStyle(wsDetalhes.getCell("A1"));
   wsDetalhes.getRow(1).height = 28;
 
   const buffer = await wb.xlsx.writeBuffer();
-  return { base64: Buffer.from(buffer).toString("base64"), mes };
+  return { base64: Buffer.from(buffer).toString("base64"), periodoLabel };
 }
