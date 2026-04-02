@@ -2,13 +2,15 @@
 
 > **"Segurança, conforto e pontualidade"**
 
-Plataforma web de transporte executivo premium focada na região de Sorocaba/SP e cidades do estado de São Paulo. O projeto reúne clientes, motoristas e administradores em um único sistema com design dark mode e identidade visual em vermelho e cinza.
+Plataforma web de transporte executivo premium atendendo Sorocaba/SP e todo o Estado de São Paulo. Reúne clientes, motoristas e administradores em um único sistema com design dark mode, identidade visual em vermelho e cinza, e deploy contínuo na Vercel.
+
+🌐 **[sorocabaexecutivos.vercel.app](https://sorocabaexecutivos.vercel.app)**
 
 ---
 
 ## Sobre a empresa
 
-A **Sorocaba Executivos** foi fundada por Vagner Rodrigues Alberto, que iniciou como motorista de aplicativo em 2017 e construiu uma carteira fiel de clientes pelo comprometimento e direção cuidadosa. Hoje conta com uma rede de motoristas experientes e frota de alto padrão, atendendo exclusivamente a região de Sorocaba com agilidade, comodidade e segurança.
+A **Sorocaba Executivos** foi fundada por Vagner Rodrigues Alberto, que iniciou como motorista de aplicativo em 2017 e construiu uma carteira fiel de clientes pelo comprometimento e direção cuidadosa. Hoje conta com uma rede de motoristas experientes e frota de alto padrão, atendendo exclusivamente a região de Sorocaba e todo o Estado de São Paulo com agilidade, conforto e segurança.
 
 ---
 
@@ -28,13 +30,54 @@ A **Sorocaba Executivos** foi fundada por Vagner Rodrigues Alberto, que iniciou 
 
 | Camada | Tecnologia |
 |---|---|
-| Frontend | Next.js + Tailwind CSS |
-| Banco de dados | Supabase (PostgreSQL) |
-| Autenticação | NextAuth / Supabase Auth |
-| E-mail | Resend |
-| WhatsApp | Z-API |
+| Framework | Next.js 15 (App Router) |
+| Estilização | Tailwind CSS |
+| Banco de dados | Supabase (PostgreSQL + RLS) |
+| Autenticação | Supabase Auth |
+| E-mail transacional | Resend |
+| Mapas / Endereços | Google Places API |
+| Relatórios Excel | ExcelJS |
 | Hospedagem | Vercel |
-| Domínio | Hostinger |
+
+---
+
+## Estrutura do projeto
+
+```
+app/
+├── page.tsx                        # Landing page pública
+├── login/page.tsx                  # Login com e-mail e senha
+├── cadastro/page.tsx               # Cadastro de cliente
+├── esqueci-senha/page.tsx          # Recuperação de senha
+├── atualizar-senha/page.tsx        # Redefinição de senha
+├── solicitar/
+│   ├── page.tsx                    # Formulário de solicitação de corrida
+│   └── confirmacao/page.tsx        # Confirmação com dados do motorista e veículo
+├── perfil/page.tsx                 # Perfil do cliente
+├── motorista/page.tsx              # Painel do motorista
+├── painel/page.tsx                 # Painel do administrador
+├── not-found.tsx                   # Página 404
+├── actions/
+│   ├── admin.ts                    # Server actions do admin (criar viagem, motorista, Excel)
+│   ├── auth.ts                     # Server actions de autenticação
+│   └── viagens.ts                  # Server actions de viagens (solicitar, cancelar, confirmar)
+├── api/
+│   └── places/route.ts             # Proxy seguro para Google Places API
+└── components/
+    ├── Footer.tsx
+    ├── LangDropdown.tsx            # Alternância de idioma PT/EN
+    ├── Logo.tsx
+    ├── Navbar.tsx
+    ├── PlacesInput.tsx             # Input com autocomplete de endereços
+    └── ScrollButton.tsx
+
+lib/
+├── email.ts                        # Notificação de nova viagem via Resend
+└── supabase/
+    ├── admin.ts                    # Cliente Supabase com service role (server-side)
+    ├── client.ts                   # Cliente Supabase (browser)
+    └── server.ts                   # Cliente Supabase (Server Components / Actions)
+```
 
 ---
 
@@ -42,76 +85,68 @@ A **Sorocaba Executivos** foi fundada por Vagner Rodrigues Alberto, que iniciou 
 
 ### Cliente
 - Cadastro e login com e-mail e senha
-- Solicitar corrida (origem, destino, data e horário)
-- Selecionar destinos pré-definidos (aeroportos, hotéis)
-- Acompanhar status da viagem em tempo real
-- Visualizar histórico de viagens
-- Receber notificações via WhatsApp e e-mail
+- Solicitar corrida com origem, destino, paradas, data, horário e observações
+- Autocomplete de endereços via Google Places
+- Acompanhar status da viagem e dados do motorista atribuído (nome, telefone, veículo, avaliação)
+- Cancelar viagens pendentes ou agendadas
+- Editar perfil
 
 ### Motorista
-- Painel pessoal com resumo do dia
-- Agenda semanal de viagens programadas
-- Aceite ou recusa de novas solicitações
+- Painel pessoal com métricas por mês ou todos os tempos (viagens, faturamento, comissão de 10%)
+- Agenda de próximas viagens com detalhes completos (paradas, observações, cliente)
+- Histórico de viagens concluídas
 - Controle de status online/offline
-- Métricas de desempenho e avaliações recebidas
 
-### Supervisor / Admin
-- Dashboard com KPIs em tempo real (solicitações ativas, motoristas disponíveis, faturamento, satisfação)
-- Fila de viagens em aberto com atribuição manual a motoristas
-- Mapa ao vivo com monitoramento de frota via GPS
-- Gestão do status de cada motorista
-- Alertas do sistema e relatórios gerenciais
+### Administrador
+- **Dashboard** com KPIs em tempo real, pendentes sem motorista e próximas viagens
+- **Fila de viagens** com atribuição de motorista, definição de valor e acompanhamento de status
+- **Motoristas** — cadastro, edição, cadastro de veículo (modelo, placa, cor) e atribuição de perfil
+- **Clientes** — busca e atribuição de perfil
+- **Buscar** — pesquisa unificada de corridas, motoristas e clientes com filtros
+- **Relatórios** — KPIs mensais ou todos os tempos, faturamento por motorista com controle de comissão paga, exportação Excel com 3 abas (Visão Geral, Por Motorista, Viagens Detalhadas)
+- Notificação por e-mail a cada nova solicitação de viagem
 
 ---
 
-## Telas implementadas
+## Banco de dados
 
+### Tabelas principais
+
+| Tabela | Campos relevantes |
+|---|---|
+| `perfis` | id, nome, telefone, perfil (`cliente \| motorista \| admin`), ativo, online, veiculo_modelo, veiculo_placa, veiculo_cor |
+| `viagens` | id, cliente_id, motorista_id, origem, destino, paradas, data_hora, status, valor, observacoes |
+| `avaliacoes` | id, viagem_id, avaliador_id, nota (1–5) |
+
+### Status de viagem
+
+`pendente` → `agendada` → `confirmada` → `em_rota` → `concluida` | `cancelada`
+
+---
+
+## Variáveis de ambiente
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+NEXT_PUBLIC_GOOGLE_PLACES_KEY=
+RESEND_API_KEY=
+ADMIN_EMAIL=
+NEXT_PUBLIC_APP_URL=https://sorocabaexecutivos.vercel.app
 ```
-app/
-├── page.tsx                       # Landing page
-├── login/page.tsx                 # Login
-├── cadastro/page.tsx              # Cadastro de cliente
-├── solicitar/page.tsx             # Solicitação de corrida
-├── solicitar/confirmacao/page.tsx # Confirmação da corrida
-├── perfil/page.tsx                # Perfil do usuário
-├── historico/page.tsx             # Histórico de viagens
-├── motorista/page.tsx             # Painel do motorista
-├── painel/page.tsx                # Painel do administrador
-└── components/
-    ├── Navbar.tsx
-    ├── Footer.tsx
-    └── Logo.tsx
+
+---
+
+## Rodando localmente
+
+```bash
+npm install
+npm run dev
 ```
-
----
-
-## Banco de dados (ERD)
-
-- **Usuários** — id, nome, e-mail, senha (hash), telefone, perfil (`cliente | motorista | admin`), created_at
-- **Viagens** — id, cliente_id, motorista_id, origem, destino, data_hora, status (`pendente | confirmada | em_rota | concluída | cancelada`), created_at
-- **Destinos Pré-definidos** — id, nome, endereço, tipo (`aeroporto | hotel | corporativo | outro`)
-- **Avaliações** — id, viagem_id, avaliador_id, nota (1–5), comentário, created_at
-- **Notificações** — id, usuário_id, viagem_id, tipo (`whatsapp | email | push`), mensagem, status (`enviada | falha`), created_at
-
----
-
-## Ordem de desenvolvimento
-
-1. Telas estáticas com Next.js e Tailwind
-2. Conexão com Supabase e criação das tabelas do ERD
-3. Autenticação com NextAuth ou Supabase Auth
-4. Formulário de solicitação de corrida salvando no banco
-5. Painel do administrador
-6. Integração com Z-API (WhatsApp) e Resend (e-mail)
-
----
-
-## Idiomas
-
-O site suporta alternância entre **Português** e **Inglês**.
 
 ---
 
 ## Licença
 
-Projeto privado — Sorocaba Executivos © 2024
+Projeto privado — Sorocaba Executivos © 2025
