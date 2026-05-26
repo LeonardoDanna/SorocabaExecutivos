@@ -4,6 +4,7 @@ import Link from "next/link";
 import Logo from "../components/Logo";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { useState, useTransition } from "react";
+import { useSearchParams } from "next/navigation";
 import { useLang } from "../hooks/useLang";
 import LangDropdown from "../components/LangDropdown";
 import { login } from "../actions/auth";
@@ -83,6 +84,8 @@ export default function LoginPage() {
   const [erros, setErros] = useState<Erros>({});
   const [isPending, startTransition] = useTransition();
   const { lang, setLang } = useLang();
+  const searchParams = useSearchParams();
+  const next = searchParams.get("redirect") ?? "";
   const l = t[lang];
 
   function validateField(field: keyof Erros, value: string): ErroKey | "" {
@@ -145,6 +148,7 @@ export default function LoginPage() {
 
         <div className="bg-[#2B2B2B] border border-[#444444] rounded-xl p-8 shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
           <form onSubmit={handleSubmit} className="space-y-5">
+            <input type="hidden" name="redirect" value={next} />
 
             {/* Email */}
             <div>

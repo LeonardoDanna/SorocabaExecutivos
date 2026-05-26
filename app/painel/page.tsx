@@ -11,7 +11,7 @@ import {
   Plus, X, Check, Loader2, Search, Download,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { criarViagem, criarMotorista, gerarRelatorioExcel } from "@/app/actions/admin";
+import { criarViagem, criarMotorista, gerarRelatorioExcel, atribuirMotorista, cancelarViagemAdmin } from "@/app/actions/admin";
 import { logout } from "@/app/actions/auth";
 
 // ── Tipos ──────────────────────────────────────────────────
@@ -671,8 +671,18 @@ export default function PainelPage() {
       }
     }
     setErrosViagem((prev) => { const n = { ...prev }; delete n[viagemId]; return n; });
-    const supabase = createClient();
-    await supabase.from("viagens").update({ status: novoStatus }).eq("id", viagemId);
+
+    if (novoStatus === "cancelada") {
+      const result = await cancelarViagemAdmin(viagemId);
+      if (result?.erro) {
+        setErrosViagem((prev) => ({ ...prev, [viagemId]: result.erro }));
+        return;
+      }
+    } else {
+      const supabase = createClient();
+      await supabase.from("viagens").update({ status: novoStatus }).eq("id", viagemId);
+    }
+
     await loadData();
   }
 
@@ -685,12 +695,12 @@ export default function PainelPage() {
       return;
     }
     setErrosViagem((prev) => { const n = { ...prev }; delete n[viagemId]; return n; });
-    const valor = parseFloat(valorRaw.replace(",", "."));
-    const supabase = createClient();
-    await supabase
-      .from("viagens")
-      .update({ motorista_id: motoristaId, status: "agendada", ...(valor ? { valor } : {}) })
-      .eq("id", viagemId);
+    const valor = parseFloat(valorRaw.replace(",", ".")) || null;
+    const result = await atribuirMotorista(viagemId, motoristaId, valor);
+    if (result?.erro) {
+      setErrosViagem((prev) => ({ ...prev, [viagemId]: result.erro }));
+      return;
+    }
     await loadData();
   }
 

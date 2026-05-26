@@ -45,11 +45,18 @@ export async function cadastrar(formData: FormData) {
   redirect("/solicitar");
 }
 
+const ROTAS_SEGURAS: Record<string, string[]> = {
+  cliente: ["/solicitar", "/perfil"],
+  motorista: ["/motorista"],
+  admin: ["/painel"],
+};
+
 export async function login(formData: FormData) {
   const supabase = await createClient();
 
   const email = formData.get("email") as string;
   const senha = formData.get("senha") as string;
+  const next = (formData.get("redirect") as string) ?? "";
 
   const { data, error } = await supabase.auth.signInWithPassword({ email, password: senha });
 
@@ -57,8 +64,13 @@ export async function login(formData: FormData) {
     return { erro: codigoErro(error.message) };
   }
 
-  const perfil = data.user?.user_metadata?.perfil;
-  if (perfil === "admin") redirect("/painel");
+  const perfil = data.user?.user_metadata?.perfil as string;
+
+  const rotasPerfil = ROTAS_SEGURAS[perfil] ?? [];
+  const nextValido = next && rotasPerfil.some((r) => next === r || next.startsWith(r + "/"));
+
+  if (nextValido) redirect(next);
+  else if (perfil === "admin") redirect("/painel");
   else if (perfil === "motorista") redirect("/motorista");
   else redirect("/solicitar");
 }

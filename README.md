@@ -2,9 +2,7 @@
 
 > **"Segurança, conforto e pontualidade"**
 
-Plataforma web de transporte executivo premium atendendo Sorocaba/SP e todo o Estado de São Paulo. Reúne clientes, motoristas e administradores em um único sistema com design dark mode, identidade visual em vermelho e cinza, e deploy contínuo na Vercel.
-
-🌐 **[sorocabaexecutivos.vercel.app](https://sorocabaexecutivos.vercel.app)**
+Plataforma web de gestão de transporte executivo premium, atendendo Sorocaba/SP e todo o Estado de São Paulo. Reúne clientes, motoristas e administradores em um único sistema com notificações por e-mail e WhatsApp, design dark mode e deploy contínuo na Vercel.
 
 ---
 
@@ -14,29 +12,18 @@ A **Sorocaba Executivos** foi fundada por Vagner Rodrigues Alberto, que iniciou 
 
 ---
 
-## Serviços
-
-- Carro Sedan e Van Executiva com Ar Condicionado
-- Táxi Executivo e Transfer
-- Atendimento nos aeroportos Viracopos (VCP), Congonhas (CGH) e Guarulhos (GRU)
-- Transfer para todas as cidades do Estado de São Paulo
-- Traslado entre aeroportos, residências, hotéis, spas, resorts e rodoviárias
-- Eventos corporativos, congressos, reuniões e seminários
-- Transporte de palestrantes, professores, VIPs e particulares
-
----
-
-## Stack tecnológica
+## Stack
 
 | Camada | Tecnologia |
 |---|---|
-| Framework | Next.js 15 (App Router) |
+| Framework | Next.js (App Router) |
 | Estilização | Tailwind CSS |
 | Banco de dados | Supabase (PostgreSQL + RLS) |
 | Autenticação | Supabase Auth |
 | E-mail transacional | Resend |
-| Mapas / Endereços | Google Places API |
-| Relatórios Excel | ExcelJS |
+| WhatsApp | Z-API |
+| Endereços | Google Places API |
+| Relatórios | ExcelJS |
 | Hospedagem | Vercel |
 
 ---
@@ -45,38 +32,42 @@ A **Sorocaba Executivos** foi fundada por Vagner Rodrigues Alberto, que iniciou 
 
 ```
 app/
-├── page.tsx                        # Landing page pública
-├── login/page.tsx                  # Login com e-mail e senha
-├── cadastro/page.tsx               # Cadastro de cliente
-├── esqueci-senha/page.tsx          # Recuperação de senha
-├── atualizar-senha/page.tsx        # Redefinição de senha
+├── page.tsx                      # Landing page pública
+├── login/page.tsx
+├── cadastro/page.tsx
+├── esqueci-senha/page.tsx
+├── atualizar-senha/page.tsx
 ├── solicitar/
-│   ├── page.tsx                    # Formulário de solicitação de corrida
-│   └── confirmacao/page.tsx        # Confirmação com dados do motorista e veículo
-├── perfil/page.tsx                 # Perfil do cliente
-├── motorista/page.tsx              # Painel do motorista
-├── painel/page.tsx                 # Painel do administrador
-├── not-found.tsx                   # Página 404
+│   ├── page.tsx                  # Formulário de solicitação de corrida
+│   └── confirmacao/page.tsx      # Confirmação com dados do motorista e veículo
+├── perfil/page.tsx               # Painel do cliente
+├── motorista/page.tsx            # Painel do motorista
+├── painel/page.tsx               # Painel do administrador
+├── not-found.tsx
 ├── actions/
-│   ├── admin.ts                    # Server actions do admin (criar viagem, motorista, Excel)
-│   ├── auth.ts                     # Server actions de autenticação
-│   └── viagens.ts                  # Server actions de viagens (solicitar, cancelar, confirmar)
+│   ├── admin.ts                  # atribuirMotorista, cancelarViagemAdmin, criarViagem, criarMotorista, gerarRelatorioExcel
+│   ├── auth.ts                   # login, logout, cadastro, esqueci-senha
+│   ├── motorista.ts              # atualizarStatusViagem
+│   └── viagens.ts                # solicitarCorrida, cancelarViagem, getConfirmacao
 ├── api/
-│   └── places/route.ts             # Proxy seguro para Google Places API
+│   └── places/route.ts           # Proxy seguro para Google Places API
 └── components/
     ├── Footer.tsx
-    ├── LangDropdown.tsx            # Alternância de idioma PT/EN
+    ├── LangDropdown.tsx          # Alternância de idioma PT/EN/ES
     ├── Logo.tsx
     ├── Navbar.tsx
-    ├── PlacesInput.tsx             # Input com autocomplete de endereços
+    ├── PlacesInput.tsx           # Input com autocomplete de endereços
     └── ScrollButton.tsx
 
 lib/
-├── email.ts                        # Notificação de nova viagem via Resend
+├── email.ts                      # Todas as funções de e-mail (Resend)
+├── whatsapp.ts                   # enviarMensagem via Z-API
 └── supabase/
-    ├── admin.ts                    # Cliente Supabase com service role (server-side)
-    ├── client.ts                   # Cliente Supabase (browser)
-    └── server.ts                   # Cliente Supabase (Server Components / Actions)
+    ├── admin.ts                  # Cliente com service role (server-side)
+    ├── client.ts                 # Cliente browser
+    └── server.ts                 # Cliente para Server Components e Actions
+
+proxy.ts                          # Middleware de proteção de rotas por perfil
 ```
 
 ---
@@ -85,32 +76,48 @@ lib/
 
 ### Cliente
 - Cadastro e login com e-mail e senha
-- Solicitar corrida com origem, destino, paradas, data, horário e observações
+- Solicitar corrida: origem, destino, paradas, data, horário e observações
 - Autocomplete de endereços via Google Places
-- Acompanhar status da viagem e dados do motorista atribuído (nome, telefone, veículo, avaliação)
+- Acompanhar status da viagem em tempo real
+- Ver dados do motorista atribuído (nome, telefone, veículo, avaliação média)
 - Cancelar viagens pendentes ou agendadas
-- Editar perfil
+- Avaliar viagem concluída (nota 1–5)
+- Editar perfil e trocar senha
 
 ### Motorista
-- Painel pessoal com métricas por mês ou todos os tempos (viagens, faturamento, comissão de 10%)
-- Agenda de próximas viagens com detalhes completos (paradas, observações, cliente)
+- Painel com métricas por mês ou todos os tempos (viagens, faturamento, comissão)
+- Agenda de próximas corridas com detalhes completos (paradas, observações, cliente)
 - Histórico de viagens concluídas
-- Controle de status online/offline
+- Aceitar ou recusar corridas atribuídas pelo admin
+- Atualizar status da viagem (`confirmada` → `em_rota` → `concluida`)
+- Toggle online/offline
 
 ### Administrador
-- **Dashboard** com KPIs em tempo real, pendentes sem motorista e próximas viagens
-- **Fila de viagens** com atribuição de motorista, definição de valor e acompanhamento de status
-- **Motoristas** — cadastro, edição, cadastro de veículo (modelo, placa, cor) e atribuição de perfil
-- **Clientes** — busca e atribuição de perfil
-- **Buscar** — pesquisa unificada de corridas, motoristas e clientes com filtros
-- **Relatórios** — KPIs mensais ou todos os tempos, faturamento por motorista com controle de comissão paga, exportação Excel com 3 abas (Visão Geral, Por Motorista, Viagens Detalhadas)
-- Notificação por e-mail a cada nova solicitação de viagem
+- **Dashboard** com KPIs em tempo real: viagens pendentes, motoristas online, faturamento do mês
+- **Fila de viagens**: atribuição de motorista, definição de valor, mudança de status
+- **Motoristas**: cadastro, edição, dados de veículo (modelo, placa, cor), ativar/desativar
+- **Clientes**: busca e visualização de perfil
+- **Busca unificada**: corridas, motoristas e clientes com filtros
+- **Relatórios**: KPIs mensais, faturamento por motorista com controle de comissão paga, exportação Excel com 3 abas
+
+---
+
+## Notificações
+
+| Evento | E-mail | WhatsApp |
+|---|---|---|
+| Nova viagem criada | Admin | — |
+| Motorista atribuído | Cliente · Motorista | Cliente · Motorista |
+| Motorista aceita (`confirmada`) | — | Cliente |
+| Motorista inicia (`em_rota`) | — | Cliente |
+| Cliente cancela | Motorista | Motorista |
+| Admin cancela | Cliente · Motorista | Cliente · Motorista |
 
 ---
 
 ## Banco de dados
 
-### Tabelas principais
+### Tabelas
 
 | Tabela | Campos relevantes |
 |---|---|
@@ -118,22 +125,39 @@ lib/
 | `viagens` | id, cliente_id, motorista_id, origem, destino, paradas, data_hora, status, valor, observacoes |
 | `avaliacoes` | id, viagem_id, avaliador_id, nota (1–5) |
 
-### Status de viagem
+### Fluxo de status
 
-`pendente` → `agendada` → `confirmada` → `em_rota` → `concluida` | `cancelada`
+```
+pendente → agendada → confirmada → em_rota → concluida
+                                            ↘ cancelada
+```
 
 ---
 
 ## Variáveis de ambiente
 
+Copie `.env.example` para `.env.local` e preencha:
+
 ```env
+# Supabase
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
+
+# Google Places
 NEXT_PUBLIC_GOOGLE_PLACES_KEY=
+
+# Resend (e-mails transacionais)
 RESEND_API_KEY=
 ADMIN_EMAIL=
-NEXT_PUBLIC_APP_URL=https://sorocabaexecutivos.vercel.app
+
+# URL pública do app
+NEXT_PUBLIC_APP_URL=
+
+# WhatsApp via Z-API
+ZAPI_INSTANCE_ID=
+ZAPI_TOKEN=
+ZAPI_CLIENT_TOKEN=
 ```
 
 ---
@@ -149,4 +173,4 @@ npm run dev
 
 ## Licença
 
-Projeto privado — Sorocaba Executivos © 2025
+Projeto privado — Sorocaba Executivos © 2026

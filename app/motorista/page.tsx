@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { logout } from "@/app/actions/auth";
+import { atualizarStatusViagem } from "@/app/actions/motorista";
 
 // ── Tipos ──────────────────────────────────────────────────
 
@@ -169,8 +170,7 @@ export default function MotoristaPainelPage() {
   }
 
   async function handleAtualizarStatus(viagemId: string, novoStatus: StatusViagem) {
-    const supabase = createClient();
-    await supabase.from("viagens").update({ status: novoStatus }).eq("id", viagemId);
+    await atualizarStatusViagem(viagemId, novoStatus);
     await loadData();
   }
 

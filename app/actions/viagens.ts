@@ -3,7 +3,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { notificarAdminNovaViagem } from "@/lib/email";
+import { notificarAdminNovaViagem, notificarMotoristaViagemCancelada } from "@/lib/email";
+import { enviarMensagem } from "@/lib/whatsapp";
 
 export async function solicitarCorrida(formData: FormData) {
   const supabase = await createClient();
@@ -134,7 +135,7 @@ export async function cancelarViagem(viagemId: string) {
   // Verifica se a viagem pertence ao cliente e pode ser cancelada
   const { data: viagem } = await supabase
     .from("viagens")
-    .select("id, status, cliente_id")
+    .select("id, status, cliente_id, motorista_id, origem, destino, data_hora, cliente:perfis!cliente_id(nome)")
     .eq("id", viagemId)
     .single();
 
@@ -151,5 +152,32 @@ export async function cancelarViagem(viagemId: string) {
     .eq("id", viagemId);
 
   if (error) return { erro: "Erro ao cancelar. Tente novamente." };
+
+  // Notifica motorista se estava atribuído
+  if (viagem.motorista_id) {
+    const [motoristaAuth, motoristaPerfil] = await Promise.all([
+      admin.auth.admin.getUserById(viagem.motorista_id),
+      admin.from("perfis").select("nome, telefone").eq("id", viagem.motorista_id).single(),
+    ]);
+    const motoristaEmail = motoristaAuth.data.user?.email;
+    const cli = viagem.cliente as unknown as { nome: string } | null;
+    if (motoristaEmail) {
+      notificarMotoristaViagemCancelada({
+        motoristaEmail,
+        motoristaNome: motoristaPerfil.data?.nome ?? "Motorista",
+        clienteNome: cli?.nome ?? "Cliente",
+        origem: viagem.origem,
+        destino: viagem.destino,
+        dataHora: viagem.data_hora,
+      }).catch(() => {});
+    }
+    if (motoristaPerfil.data?.telefone) {
+      enviarMensagem(
+        motoristaPerfil.data.telefone,
+        `Olá, ${motoristaPerfil.data.nome ?? "Motorista"}! A corrida com o cliente ${cli?.nome ?? "Cliente"} (${viagem.origem} → ${viagem.destino}) foi cancelada pelo cliente. Sorocaba Executivos.`
+      ).catch(() => {});
+    }
+  }
+
   return { sucesso: true };
 }

@@ -3,6 +3,13 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import ExcelJS from "exceljs";
+import {
+  notificarClienteCorridaConfirmada,
+  notificarMotoristaNovaViagem,
+  notificarMotoristaViagemCancelada,
+  notificarClienteViagemCancelada,
+} from "@/lib/email";
+import { enviarMensagem } from "@/lib/whatsapp";
 
 async function verificarAdmin() {
   const supabase = await createClient();
@@ -11,6 +18,187 @@ async function verificarAdmin() {
     throw new Error("Acesso negado.");
   }
   return user;
+}
+
+export async function atribuirMotorista(
+  viagemId: string,
+  motoristaId: string,
+  valor: number | null
+) {
+  try { await verificarAdmin(); } catch { return { erro: "Acesso negado." }; }
+
+  const admin = createAdminClient();
+
+  const { error } = await admin
+    .from("viagens")
+    .update({ motorista_id: motoristaId, status: "agendada", ...(valor ? { valor } : {}) })
+    .eq("id", viagemId);
+
+  if (error) return { erro: "Erro ao atribuir motorista." };
+
+  // Busca dados para notificação em paralelo
+  const { data: viagem } = await admin
+    .from("viagens")
+    .select("origem, destino, data_hora, valor, cliente_id, cliente:perfis!cliente_id(nome, telefone)")
+    .eq("id", viagemId)
+    .single();
+
+  if (!viagem) return { sucesso: true };
+
+  const [clienteAuth, motoristaAuth, motoristaPerfil] = await Promise.all([
+    admin.auth.admin.getUserById(viagem.cliente_id),
+    admin.auth.admin.getUserById(motoristaId),
+    admin.from("perfis")
+      .select("nome, telefone, veiculo_modelo, veiculo_placa, veiculo_cor")
+      .eq("id", motoristaId)
+      .single(),
+  ]);
+
+  const clienteEmail = clienteAuth.data.user?.email;
+  const motoristaEmail = motoristaAuth.data.user?.email;
+  const cli = viagem.cliente as unknown as { nome: string; telefone: string | null } | null;
+  const mot = motoristaPerfil.data;
+  const veiculoInfo = mot
+    ? [mot.veiculo_modelo, mot.veiculo_placa, mot.veiculo_cor].filter(Boolean).join(" · ")
+    : "";
+
+  const promises: Promise<unknown>[] = [];
+
+  const dt = new Date(viagem.data_hora);
+  const dataStr = dt.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const horaStr = dt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+
+  if (clienteEmail) {
+    promises.push(
+      notificarClienteCorridaConfirmada({
+        clienteEmail,
+        clienteNome: cli?.nome ?? "Cliente",
+        motoristaNome: mot?.nome ?? "Motorista",
+        motoristaFone: mot?.telefone ?? null,
+        veiculoInfo,
+        origem: viagem.origem,
+        destino: viagem.destino,
+        dataHora: viagem.data_hora,
+      }).catch(() => {})
+    );
+  }
+
+  if (cli?.telefone) {
+    const veiculoTexto = veiculoInfo ? ` Veículo: ${veiculoInfo}.` : "";
+    const foneTexto = mot?.telefone ? ` WhatsApp do motorista: ${mot.telefone}.` : "";
+    promises.push(
+      enviarMensagem(
+        cli.telefone,
+        `Olá, ${cli?.nome ?? "Cliente"}! Sua corrida está confirmada para ${dataStr} às ${horaStr}. Motorista: ${mot?.nome ?? "Motorista"}.${veiculoTexto}${foneTexto} Sorocaba Executivos.`
+      ).catch(() => {})
+    );
+  }
+
+  if (motoristaEmail) {
+    promises.push(
+      notificarMotoristaNovaViagem({
+        motoristaEmail,
+        motoristaNome: mot?.nome ?? "Motorista",
+        clienteNome: cli?.nome ?? "Cliente",
+        clienteFone: cli?.telefone ?? null,
+        origem: viagem.origem,
+        destino: viagem.destino,
+        dataHora: viagem.data_hora,
+        valor: valor ?? (viagem.valor as number | null),
+      }).catch(() => {})
+    );
+  }
+
+  if (mot?.telefone) {
+    const foneClienteTexto = cli?.telefone ? ` Contato do cliente: ${cli.telefone}.` : "";
+    promises.push(
+      enviarMensagem(
+        mot.telefone,
+        `Olá, ${mot?.nome ?? "Motorista"}! Nova corrida atribuída para ${dataStr} às ${horaStr}. Cliente: ${cli?.nome ?? "Cliente"}.${foneClienteTexto} De: ${viagem.origem}. Para: ${viagem.destino}. Sorocaba Executivos.`
+      ).catch(() => {})
+    );
+  }
+
+  await Promise.all(promises);
+  return { sucesso: true };
+}
+
+export async function cancelarViagemAdmin(viagemId: string) {
+  try { await verificarAdmin(); } catch { return { erro: "Acesso negado." }; }
+
+  const admin = createAdminClient();
+
+  const { data: viagem } = await admin
+    .from("viagens")
+    .select("status, motorista_id, origem, destino, data_hora, cliente_id, cliente:perfis!cliente_id(nome, telefone)")
+    .eq("id", viagemId)
+    .single();
+
+  if (!viagem) return { erro: "Viagem não encontrada." };
+  if (viagem.status === "cancelada") return { erro: "Viagem já cancelada." };
+
+  const { error } = await admin
+    .from("viagens")
+    .update({ status: "cancelada" })
+    .eq("id", viagemId);
+
+  if (error) return { erro: "Erro ao cancelar." };
+
+  const cli = viagem.cliente as unknown as { nome: string; telefone: string | null } | null;
+  const promises: Promise<unknown>[] = [];
+
+  const clienteAuth = await admin.auth.admin.getUserById(viagem.cliente_id);
+  const clienteEmail = clienteAuth.data.user?.email;
+  if (clienteEmail) {
+    promises.push(
+      notificarClienteViagemCancelada({
+        clienteEmail,
+        clienteNome: cli?.nome ?? "Cliente",
+        origem: viagem.origem,
+        destino: viagem.destino,
+        dataHora: viagem.data_hora,
+      }).catch(() => {})
+    );
+  }
+  if (cli?.telefone) {
+    promises.push(
+      enviarMensagem(
+        cli.telefone,
+        `Olá, ${cli.nome}! Sua viagem de ${viagem.origem} para ${viagem.destino} foi cancelada pela central. Em caso de dúvidas, entre em contato. Sorocaba Executivos.`
+      ).catch(() => {})
+    );
+  }
+
+  if (viagem.motorista_id) {
+    const [motoristaAuth, motoristaPerfil] = await Promise.all([
+      admin.auth.admin.getUserById(viagem.motorista_id),
+      admin.from("perfis").select("nome, telefone").eq("id", viagem.motorista_id).single(),
+    ]);
+    const motoristaEmail = motoristaAuth.data.user?.email;
+    if (motoristaEmail) {
+      promises.push(
+        notificarMotoristaViagemCancelada({
+          motoristaEmail,
+          motoristaNome: motoristaPerfil.data?.nome ?? "Motorista",
+          clienteNome: cli?.nome ?? "Cliente",
+          origem: viagem.origem,
+          destino: viagem.destino,
+          dataHora: viagem.data_hora,
+        }).catch(() => {})
+      );
+    }
+    if (motoristaPerfil.data?.telefone) {
+      promises.push(
+        enviarMensagem(
+          motoristaPerfil.data.telefone,
+          `Olá, ${motoristaPerfil.data.nome ?? "Motorista"}! A corrida com o cliente ${cli?.nome ?? "Cliente"} (${viagem.origem} → ${viagem.destino}) foi cancelada pela central. Sorocaba Executivos.`
+        ).catch(() => {})
+      );
+    }
+  }
+
+  await Promise.all(promises);
+  return { sucesso: true };
 }
 
 export async function criarViagem(formData: FormData) {
