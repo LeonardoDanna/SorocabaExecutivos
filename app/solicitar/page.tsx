@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import Navbar from "../components/Navbar";
 import LangDropdown from "../components/LangDropdown";
 import { Calendar, ArrowRight, Plus, X, MessageSquare } from "lucide-react";

@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
 import Logo from "../components/Logo";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
