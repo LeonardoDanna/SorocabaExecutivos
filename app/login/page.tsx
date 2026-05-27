@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Logo from "../components/Logo";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useState, useTransition, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useLang } from "../hooks/useLang";
 import LangDropdown from "../components/LangDropdown";
@@ -78,7 +78,7 @@ const t = {
 type ErroKey = keyof typeof t.pt.erros;
 type Erros = { email?: ErroKey; senha?: ErroKey };
 
-export default function LoginPage() {
+function LoginContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [erro, setErro] = useState<ErroKey | "">("");
   const [erros, setErros] = useState<Erros>({});
@@ -220,5 +220,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginContent />
+    </Suspense>
   );
 }
