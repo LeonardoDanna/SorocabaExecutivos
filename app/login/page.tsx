@@ -5,8 +5,7 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import Logo from "../components/Logo";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
-import { useState, useTransition, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState, useTransition, useEffect } from "react";
 import { useLang } from "../hooks/useLang";
 import LangDropdown from "../components/LangDropdown";
 import { login } from "../actions/auth";
@@ -80,14 +79,18 @@ const t = {
 type ErroKey = keyof typeof t.pt.erros;
 type Erros = { email?: ErroKey; senha?: ErroKey };
 
-function LoginContent() {
+export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [erro, setErro] = useState<ErroKey | "">("");
   const [erros, setErros] = useState<Erros>({});
   const [isPending, startTransition] = useTransition();
   const { lang, setLang } = useLang();
-  const searchParams = useSearchParams();
-  const next = searchParams.get("redirect") ?? "";
+  const [next, setNext] = useState("");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setNext(params.get("redirect") ?? "");
+  }, []);
   const l = t[lang];
 
   function validateField(field: keyof Erros, value: string): ErroKey | "" {
@@ -222,13 +225,5 @@ function LoginContent() {
         </div>
       </div>
     </div>
-  );
-}
-
-export default function LoginPage() {
-  return (
-    <Suspense>
-      <LoginContent />
-    </Suspense>
   );
 }
